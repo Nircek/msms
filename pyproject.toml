@@ -1,14 +1,21 @@
+[build-system]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+
 [project]
-name = "msms"
-version = "0.0.1"
+dependencies = ["mypy (>=1.18.2,<2.0.0)", "ruff (>=0.14.0,<0.15.0)"]
 description = "Software for Magnetic Susceptibility Measurement Station Using the AC Method"
+name = "msms"
 readme = "README.md"
 requires-python = ">=3.14"
-dependencies = [ ]
+version = "0.0.1"
 
-  [[project.authors]]
-  name = "Marcin Zepp"
-  email = "mzepp@student.agh.edu.pl"
+[[project.authors]]
+email = "mzepp@student.agh.edu.pl"
+name = "Marcin Zepp"
+
+[tool.mypy]
+plugins = []
 
 [[tool.poetry.packages]]
 include = "msms"
@@ -16,6 +23,82 @@ include = "msms"
 [tool.poetry.scripts]
 msms = "msms.__main__:main"
 
-[build-system]
-requires = [ "poetry-core>=2.0.0,<3.0.0" ]
-build-backend = "poetry.core.masonry.api"
+[tool.pre-commit-update]
+warnings = true
+
+[tool.pre-commit-update.yaml]
+mapping = 4
+offset = 2
+sequence = 4
+
+[tool.ruff]
+extend-exclude = []
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.format]
+preview = true
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+ignore = [
+  "COM812",
+  "D203",
+  "D212"
+]
+preview = true
+select = [
+  "A",
+  "ANN",
+  "ARG",
+  "B",
+  "C",
+  "COM",
+  # "D", -- docstrings
+  "DOC",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FIX",
+  "FLY",
+  "FURB",
+  "G",
+  "I",
+  "ICN",
+  "INP",
+  "INT",
+  "ISC",
+  "LOG",
+  "N",
+  "NPY",
+  "PD",
+  "PERF",
+  "PIE",
+  "PL",
+  "PT",
+  "PTH",
+  "PYI",
+  "Q",
+  "RET",
+  "RUF",
+  "SIM",
+  "SLF",
+  # "T20", - ban print()
+  "TC",
+  "TID",
+  "TRY",
+  "UP",
+  "W"
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "parents"
+
+[tool.ruff.lint.isort]
+extra-standard-library = []
+
+[tool.tomlsort]
+all = true
+ignore_case = true
+in_place = true
