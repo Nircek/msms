@@ -27,6 +27,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.infoLabel: QtWidgets.QLabel
         self.plotWidget: pg.PlotWidget
         self.logTextBrowser: QtWidgets.QTextBrowser
+        self.chartComboBox: QtWidgets.QComboBox
+
+        # FIXME: use a signal/slot to get notified about columns  # noqa: FIX001
+        self.chartComboBox.addItems([
+            "timestamp",
+            "dt",
+            "volt:dc",
+            "X",
+            "Y",
+            "AUX1",
+            "AUX2",
+            "AUX3",
+            "AUX4",
+            "sample",
+            "control",
+        ])
 
         assert self.startStopButton.receivers(self.startStopButton.clicked) > 1
         # UIC keeps connecting `clicked` and `clicked(bool)` and we need to disconnect all of them
@@ -95,7 +111,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if data.shape == ():
             return
         x_idx = self.data_feeder.data_holder.columns.index("timestamp")
-        y_idx = self.data_feeder.data_holder.columns.index("volt:dc")
+        y_idx = self.data_feeder.data_holder.columns.index(self.chartComboBox.currentText())
         size = data.shape[0]
         self.logTextBrowser.append(f"Retrieved {size} new samples.")
         logger.info("Retrieved %d new samples.", size)
