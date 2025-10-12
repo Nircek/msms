@@ -1,6 +1,5 @@
 import contextlib
 import logging
-from collections import deque
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -33,8 +32,6 @@ class MainWindow(QtWidgets.QMainWindow):
         # UIC keeps connecting `clicked` and `clicked(bool)` and we need to disconnect all of them
         self.startStopButton.clicked.disconnect()
         self.startStopButton.clicked.connect(self.on_startStopButton_clicked)
-
-        self.buffer: deque[tuple[float, float]] = deque()
 
         self.data_feeder: DataFeeder | None = None
 
@@ -92,32 +89,18 @@ class MainWindow(QtWidgets.QMainWindow):
             QtCore.QTimer.singleShot(150, lambda: setattr(self, "_programmatic_update", False))
 
     def on_timer_timeout(self) -> None:
-        if len(self.buffer) == 0:
+        if self.data_feeder is None:
             return
-        items = []
-        while True:
-            try:
-                items.append(self.buffer.popleft())  # popleft is thread-safe
-            except IndexError:
-                break
-            except Exception:
-                break
-        if not items:
+        data = self.data_feeder.data_holder.data
+        if data.shape == ():
             return
-
-        self.logTextBrowser.append(f"Retrieved {len(items)} new samples.")
-        logger.info("Retrieved %d new samples.", len(items))
-
-        ts = np.array([it[0] for it in items], dtype=float)
-        vals = np.array([it[1] for it in items], dtype=float)
-
-        if self.xs.size == 0:
-            self.xs = ts
-            self.ys = vals
-        else:
-            self.xs = np.concatenate((self.xs, ts))
-            self.ys = np.concatenate((self.ys, vals))
-
+        x_idx = self.data_feeder.data_holder.columns.index("timestamp")
+        y_idx = self.data_feeder.data_holder.columns.index("volt:dc")
+        size = data.shape[0]
+        self.logTextBrowser.append(f"Retrieved {size} new samples.")
+        logger.info("Retrieved %d new samples.", size)
+        self.xs = data[:, x_idx]
+        self.ys = data[:, y_idx]
         self.plot.setData(self.xs, self.ys)
 
         if self.followCheckBox.isChecked() and self.xs.size > 0:
@@ -143,7 +126,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             interval = self.intervalSpinBox.value()
             logger.info("Starting data feeder with interval %.2f", interval)
-            self.data_feeder = DataFeeder(self.buffer, interval=interval)
+            self.data_feeder = DataFeeder(interval=interval)
             self.data_feeder.start()
             self.startStopButton.setText("Stop")
 
