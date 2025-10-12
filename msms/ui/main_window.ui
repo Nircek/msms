@@ -14,9 +14,9 @@
    <string>MSMS</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="0,4,1,0">
+   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,99,1,1">
     <property name="spacing">
-     <number>0</number>
+     <number>2</number>
     </property>
     <property name="leftMargin">
      <number>0</number>
@@ -104,8 +104,13 @@
       <property name="minimumSize">
        <size>
         <width>0</width>
-        <height>80</height>
+        <height>70</height>
        </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
       </property>
      </widget>
     </item>
@@ -115,7 +120,7 @@
        <string/>
       </property>
       <property name="indent">
-       <number>4</number>
+       <number>8</number>
       </property>
      </widget>
     </item>

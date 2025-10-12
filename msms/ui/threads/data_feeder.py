@@ -3,6 +3,9 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
+from msms.connectivity.data_collector import DataCollector
+from msms.connectivity.visa import get_visa_library
+
 if TYPE_CHECKING:
     from collections import deque
 
@@ -27,7 +30,6 @@ class DataFeeder(threading.Thread):
     @property
     def interval(self) -> float:
         with self._interval_lock:
-            print(self._interval)
             return self._interval
 
     @interval.setter
@@ -46,13 +48,26 @@ class DataFeeder(threading.Thread):
             time.sleep(min(1.0, time_to_next_cycle))
 
     def run(self) -> None:
+        visa_library = get_visa_library()
+        logger.info("Using VISA library: %s", visa_library)
+
+        collector = DataCollector(visa_library)
+
+        collector.initialize_visa()
         try:
+            collector.discover_devices()
+            collector.initialize_devices()
             while True:
                 self.wait_for_next_cycle()
                 logger.info("Generating new data sample")
-                self.out_queue.append((time.time(), time.time()))
+                data = collector.collect_data()
+                assert isinstance(data["timestamp"], float)
+                assert isinstance(data["dt"], float)
+                self.out_queue.append((data["timestamp"], data["dt"]))
         except StopExecution:
             logger.info("Data feeder stopped")
+        finally:
+            collector.cleanup()
 
     def stop(self) -> None:
         self._stop_event.set()

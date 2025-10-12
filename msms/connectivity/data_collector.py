@@ -1,5 +1,5 @@
 import logging
-from time import sleep, time
+from time import time
 from typing import TYPE_CHECKING, cast
 
 import pyvisa
@@ -82,23 +82,16 @@ class DataCollector:
             except Exception:
                 logger.exception("Failed to initialize device: %s", device.short_display_name)
 
-    def collect_data(self) -> None:
-        if not self.devices:
-            logger.warning("No devices available for data collection")
-            return
-
-        logger.info("Starting data collection loop")
-        while True:
-            sleep(2)
-            t0 = time()
-            results: dict[str, str | float] = {}
-            for device in self.devices:
-                try:
-                    results.update(device.update())
-                except Exception:
-                    logger.exception("Failed to update device: %s", device.short_display_name)
-            results = {"timestamp": time(), "dt": round(1000 * (time() - t0), 1), **results}
-            print(results)
+    def collect_data(self) -> dict[str, str | float]:
+        logger.info("Starting data collection loop iteration")
+        t0 = time()
+        results: dict[str, str | float] = {}
+        for device in self.devices:
+            try:
+                results.update(device.update())
+            except Exception:
+                logger.exception("Failed to update device: %s", device.short_display_name)
+        return {"timestamp": time(), "dt": round(1000 * (time() - t0), 1), **results}
 
     def cleanup(self) -> None:
         for device in self.devices:

@@ -1,9 +1,10 @@
 import logging
 import sys
+import time
 
 from PyQt6 import QtWidgets
 
-from msms.connectivity.data_collection import DataCollector
+from msms.connectivity.data_collector import DataCollector
 from msms.connectivity.visa import get_visa_library
 from msms.logging_config import setup_logging
 from msms.ui.main_window import MainWindow
@@ -25,7 +26,9 @@ def main() -> None:
         try:
             collector.discover_devices()
             collector.initialize_devices()
-            collector.collect_data()
+            while True:
+                time.sleep(2)
+                print(collector.collect_data())
         finally:
             collector.cleanup()
         logger.info("MSMS application completed successfully")
