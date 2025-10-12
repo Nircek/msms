@@ -3,7 +3,17 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 
 [project]
-dependencies = ["mypy (>=1.18.2,<2.0.0)", "pre-commit (>=4.3.0,<5.0.0)", "pyvisa (>=1.15.0,<2.0.0)", "pyvisa-sim (>=0.7.1,<0.8.0)", "ruff (>=0.14.0,<0.15.0)"]
+dependencies = [
+  "mypy (>=1.18.2,<2.0.0)",
+  "numpy (>=2.3.3,<3.0.0)",
+  "pandas (>=2.3.3,<3.0.0)",
+  "pre-commit (>=4.3.0,<5.0.0)",
+  "pyqt6 (>=6.9.1,<7.0.0)",
+  "pyqtgraph (>=0.13.7,<0.14.0)",
+  "pyvisa (>=1.15.0,<2.0.0)",
+  "pyvisa-sim (>=0.7.1,<0.8.0)",
+  "ruff (>=0.14.0,<0.15.0)"
+]
 description = "Software for Magnetic Susceptibility Measurement Station Using the AC Method"
 name = "msms"
 readme = "README.md"
@@ -16,6 +26,7 @@ name = "Marcin Zepp"
 
 [project.scripts]
 msms = "msms.__main__:main"
+ui = "msms.__main__:ui"
 
 [tool.mypy]
 plugins = []
@@ -41,11 +52,7 @@ preview = true
 
 [tool.ruff.lint]
 fixable = ["ALL"]
-ignore = [
-  "COM812",
-  "D203",
-  "D212"
-]
+ignore = ["COM812", "D203", "D212"]
 preview = true
 select = [
   "A",
@@ -97,6 +104,9 @@ ban-relative-imports = "parents"
 
 [tool.ruff.lint.isort]
 extra-standard-library = []
+
+[tool.ruff.lint.per-file-ignores]
+"**/ui/*window.py" = ["N802"]
 
 [tool.tomlsort]
 all = true

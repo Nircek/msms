@@ -20,7 +20,7 @@ class RSDM3055A(DeviceBase):
     def initialize(self) -> None:
         self.command_resource("*RST")
 
-        measurement_types = ["CURR:AC", "CURR:DC", "RES", "FRES", "VOLT:AC", "VOLT:DC"]
+        measurement_types = ["CURR:DC", "CURR:AC", "RES", "FRES", "VOLT:DC", "VOLT:AC"]
         cmds = []
 
         for measurement_type in measurement_types:
@@ -36,6 +36,5 @@ class RSDM3055A(DeviceBase):
         # MEAS:...? takes about a second
         # CONF takes about a second but then it is pretty fast to get one READ?
 
-    def update(self) -> None:
-        data = self.query_resource("READ?").strip()
-        print(f"{self.initials}: {data}")
+    def _update(self) -> dict[str, str]:
+        return {"volt:dc": self.query_resource("READ?")}

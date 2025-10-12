@@ -53,8 +53,10 @@ class LakeShore330(DeviceBase):
         # For the setpoint parameter, enter a value from 0 to 999.9 for temperature or 0 to 2.4990 for voltage.
         # Commands can be concatenated with ';' but there must not be any command after the query
         # Do not combine channel, control unit, and setpoint changes. Allow one controller update cycle (half second)
+        # '*WAI\r\n'?
 
-    def update(self) -> None:
-        sample_data = self.query_resource("SDAT?").strip()  # +234.50 or +077.45
-        control_data = self.query_resource("CDAT?").strip()
-        print(f"LS: {sample_data} {control_data}")
+    def _update(self) -> dict[str, str]:
+        return {
+            "sample": self.query_resource("SDAT?"),
+            "control": self.query_resource("CDAT?"),
+        }
