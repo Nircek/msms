@@ -3,7 +3,7 @@ build-backend = "poetry.core.masonry.api"
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 
 [project]
-dependencies = ["mypy (>=1.18.2,<2.0.0)", "pyvisa (>=1.15.0,<2.0.0)", "pyvisa-sim (>=0.7.1,<0.8.0)", "ruff (>=0.14.0,<0.15.0)"]
+dependencies = ["mypy (>=1.18.2,<2.0.0)", "pre-commit (>=4.3.0,<5.0.0)", "pyvisa (>=1.15.0,<2.0.0)", "pyvisa-sim (>=0.7.1,<0.8.0)", "ruff (>=0.14.0,<0.15.0)"]
 description = "Software for Magnetic Susceptibility Measurement Station Using the AC Method"
 name = "msms"
 readme = "README.md"
@@ -14,14 +14,14 @@ version = "0.0.1"
 email = "mzepp@student.agh.edu.pl"
 name = "Marcin Zepp"
 
+[project.scripts]
+msms = "msms.__main__:main"
+
 [tool.mypy]
 plugins = []
 
 [[tool.poetry.packages]]
 include = "msms"
-
-[tool.poetry.scripts]
-msms = "msms.__main__:main"
 
 [tool.pre-commit-update]
 warnings = true

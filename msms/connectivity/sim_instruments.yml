@@ -6,11 +6,12 @@ devices:
       ASRL INSTR:
         q: "\r\n"
         r: "\n"
-    error: ERROR
     dialogues:
       - q: "*IDN?"
         r: "Stanford_Research_Systems,SR830,s/n12345,1.07"
       - q: "*RST"
+      - q: "FAST?"
+        r: "0"
       - q: "OUTX?"
         r: "0"
       - q: "*ESR?"
@@ -18,9 +19,9 @@ devices:
       - q: "*SRE?"
         r: "0"
       - q: "*STB?"
-        r: "0"
+        r: "1"
       - q: "*PSC?"
-        r: "0"
+        r: "1"
       - q: "ERRE?"
         r: "0"
       - q: "ERRS?"
@@ -28,11 +29,11 @@ devices:
       - q: "LIAE?"
         r: "0"
       - q: "LIAS?"
-        r: "0"
+        r: "16"
       - q: "SNAP?1,2,3,4"
-        r: "{RANDOM(-1.0,1.0,4):.4f},{RANDOM(-1.0,1.0,4):.4f},{RANDOM(-1.0,1.0,4):.4f},{RANDOM(-1.0,1.0,4):.4f}"
+        r: "{RANDOM(-5, 5, 4):.5f}"
       - q: "SNAP?1,2,5,6,7,8"
-        r: "{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f}"
+        r: "{RANDOM(-5, 5, 6):.5f}"
     properties:
       phase:
         default: 0.0
@@ -42,15 +43,15 @@ devices:
         setter:
           q: "PHAS {:.2f}"
           r: "OK"
-        specs: {min: -180, max: 180, type: float}
+        specs: { min: -180, max: 180, type: float }
       frequency:
-        default: 1.000
+        default: 1000.0
         getter:
           q: "FREQ?"
-          r: "{:.3f}"
+          r: "{:.5}"
         setter:
           q: "FREQ {:.3f}"
-        specs: {min: 0.001, max: 102.000, type: float}
+        specs: { min: 0.001, max: 102000.0, type: float }
       amplitude:
         default: 1.000
         getter:
@@ -58,14 +59,13 @@ devices:
           r: "{:.3f}"
         setter:
           q: "SLVL {:.3f}"
-        specs: {min: 0.004, max: 5.000, type: float}
+        specs: { min: 0.004, max: 5.000, type: float }
 
   LSCI_MODEL330:
     eom:
       ASRL INSTR:
         q: "\r\n"
         r: "\r\n"
-    error: ERROR
     dialogues:
       - q: "*IDN?"
         r: "LSCI,MODEL330,0,0"
@@ -79,29 +79,42 @@ devices:
       - q: "TUNE?"
         r: "3"
       - q: "ESE?"
-        r: "0"
+        r: "+000.00 "
       - q: "ESR?"
-        r: "0"
+        r: "+000.00 "
       - q: "*SRE?"
-        r: "0"
+        r: "000"
       - q: "*STB?"
-        r: "0"
+        r: "000"
       - q: "CCHN?"
-        r: "1"
+        r: "A"
       - q: "SCHN?"
-        r: "2"
+        r: "B"
       - q: "FILT?"
-        r: "10"
+        r: "1"
       - q: "RAMPS?"
         r: "0"
       - q: "RANG?"
-        r: "1"
+        r: "0"
       - q: "SETP?"
-        r: "{RANDOM(10,300,1):.2f}"
+        r: "{RANDOM(10, 300, 1):.2f}"
       - q: "CDAT?"
-        r: "+{RANDOM(20,300,1):.2f}"
+        r: "{RANDOM(20, 300, 1):.2f}"
+        # r: "ER27"
       - q: "SDAT?"
-        r: "+{RANDOM(20,300,1):.2f}"
+        # r: "{RANDOM(20, 300, 1):.2f}"
+        r: "ER27"
+      - q: "CLIM?"
+        r: "000.00"
+      - q: "GAIN?"
+        r: "040"
+      - q: "RSET?"
+        r: "220"
+      - q: "RATE?"
+        r: "100"
+      - q: "HEAT?"
+        r: "000"
+
     properties:
       setpoint:
         default: 300.0
@@ -110,30 +123,29 @@ devices:
           r: "{:.2f}"
         setter:
           q: "SETP {:.2f}"
-        specs: {min: 0, max: 999.9, type: float}
+        specs: { min: 0, max: 999.9, type: float }
       ramp:
-        default: 0
+        default: 1
         getter:
           q: "RAMP?"
           r: "{:d}"
         setter:
           q: "RAMP {:d}"
-        specs: {min: 0, max: 1, type: int}
+        specs: { min: 0, max: 1, type: int }
       ramp_rate:
         default: 10.0
         getter:
           q: "RAMPR?"
-          r: "{:.2f}"
+          r: "{:.1f}"
         setter:
           q: "RAMPR {:.2f}"
-        specs: {min: 0, max: 99.9, type: float}
+        specs: { min: 0, max: 99.9, type: float }
 
   RSDM3055A:
     eom:
       ASRL INSTR:
         q: "\r\n"
         r: "\n"
-    error: ERROR
     dialogues:
       - q: "*IDN?"
         r: "RS Pro,SDM3055A,SDM35001,1.2.3"
@@ -144,13 +156,17 @@ devices:
       - q: "CONF:FRES"
       - q: "CONF:VOLT:AC"
       - q: "CONF:VOLT:DC"
+      - q: ":SAMP:COUN 1"
+      - q: ":TRIG:COUN 1"
+      - q: ":CONF?"
+        r: "sim"
       - q: "READ?"
-        r: "{RANDOM(0.0,10.0,1):.5f}"
+        r: "{RANDOM(0.0, 10.0, 1):.5f}"
 
 resources:
   ASRL1::INSTR:
-    device: SR830
-  ASRL2::INSTR:
-    device: LSCI_MODEL330
-  ASRL3::INSTR:
     device: RSDM3055A
+  ASRL2::INSTR:
+    device: SR830
+  ASRL3::INSTR:
+    device: LSCI_MODEL330
