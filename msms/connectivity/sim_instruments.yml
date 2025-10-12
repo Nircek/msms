@@ -1,0 +1,156 @@
+spec: "1.1"
+
+devices:
+  SR830:
+    eom:
+      ASRL INSTR:
+        q: "\r\n"
+        r: "\n"
+    error: ERROR
+    dialogues:
+      - q: "*IDN?"
+        r: "Stanford_Research_Systems,SR830,s/n12345,1.07"
+      - q: "*RST"
+      - q: "OUTX?"
+        r: "0"
+      - q: "*ESR?"
+        r: "0"
+      - q: "*SRE?"
+        r: "0"
+      - q: "*STB?"
+        r: "0"
+      - q: "*PSC?"
+        r: "0"
+      - q: "ERRE?"
+        r: "0"
+      - q: "ERRS?"
+        r: "0"
+      - q: "LIAE?"
+        r: "0"
+      - q: "LIAS?"
+        r: "0"
+      - q: "SNAP?1,2,3,4"
+        r: "{RANDOM(-1.0,1.0,4):.4f},{RANDOM(-1.0,1.0,4):.4f},{RANDOM(-1.0,1.0,4):.4f},{RANDOM(-1.0,1.0,4):.4f}"
+      - q: "SNAP?1,2,5,6,7,8"
+        r: "{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f},{RANDOM(-1.0,1.0,6):.4f}"
+    properties:
+      phase:
+        default: 0.0
+        getter:
+          q: "PHAS?"
+          r: "{:.2f}"
+        setter:
+          q: "PHAS {:.2f}"
+          r: "OK"
+        specs: {min: -180, max: 180, type: float}
+      frequency:
+        default: 1.000
+        getter:
+          q: "FREQ?"
+          r: "{:.3f}"
+        setter:
+          q: "FREQ {:.3f}"
+        specs: {min: 0.001, max: 102.000, type: float}
+      amplitude:
+        default: 1.000
+        getter:
+          q: "SLVL?"
+          r: "{:.3f}"
+        setter:
+          q: "SLVL {:.3f}"
+        specs: {min: 0.004, max: 5.000, type: float}
+
+  LSCI_MODEL330:
+    eom:
+      ASRL INSTR:
+        q: "\r\n"
+        r: "\r\n"
+    error: ERROR
+    dialogues:
+      - q: "*IDN?"
+        r: "LSCI,MODEL330,0,0"
+      - q: "*RST"
+      - q: "*TST?"
+        r: "0"
+      - q: "CUNI?"
+        r: "K"
+      - q: "SUNI?"
+        r: "K"
+      - q: "TUNE?"
+        r: "3"
+      - q: "ESE?"
+        r: "0"
+      - q: "ESR?"
+        r: "0"
+      - q: "*SRE?"
+        r: "0"
+      - q: "*STB?"
+        r: "0"
+      - q: "CCHN?"
+        r: "1"
+      - q: "SCHN?"
+        r: "2"
+      - q: "FILT?"
+        r: "10"
+      - q: "RAMPS?"
+        r: "0"
+      - q: "RANG?"
+        r: "1"
+      - q: "SETP?"
+        r: "{RANDOM(10,300,1):.2f}"
+      - q: "CDAT?"
+        r: "+{RANDOM(20,300,1):.2f}"
+      - q: "SDAT?"
+        r: "+{RANDOM(20,300,1):.2f}"
+    properties:
+      setpoint:
+        default: 300.0
+        getter:
+          q: "SETP?"
+          r: "{:.2f}"
+        setter:
+          q: "SETP {:.2f}"
+        specs: {min: 0, max: 999.9, type: float}
+      ramp:
+        default: 0
+        getter:
+          q: "RAMP?"
+          r: "{:d}"
+        setter:
+          q: "RAMP {:d}"
+        specs: {min: 0, max: 1, type: int}
+      ramp_rate:
+        default: 10.0
+        getter:
+          q: "RAMPR?"
+          r: "{:.2f}"
+        setter:
+          q: "RAMPR {:.2f}"
+        specs: {min: 0, max: 99.9, type: float}
+
+  RSDM3055A:
+    eom:
+      ASRL INSTR:
+        q: "\r\n"
+        r: "\n"
+    error: ERROR
+    dialogues:
+      - q: "*IDN?"
+        r: "RS Pro,SDM3055A,SDM35001,1.2.3"
+      - q: "*RST"
+      - q: "CONF:CURR:AC"
+      - q: "CONF:CURR:DC"
+      - q: "CONF:RES"
+      - q: "CONF:FRES"
+      - q: "CONF:VOLT:AC"
+      - q: "CONF:VOLT:DC"
+      - q: "READ?"
+        r: "{RANDOM(0.0,10.0,1):.5f}"
+
+resources:
+  ASRL1::INSTR:
+    device: SR830
+  ASRL2::INSTR:
+    device: LSCI_MODEL330
+  ASRL3::INSTR:
+    device: RSDM3055A
