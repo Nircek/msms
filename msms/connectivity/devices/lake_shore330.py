@@ -55,8 +55,29 @@ class LakeShore330(DeviceBase):
         # Do not combine channel, control unit, and setpoint changes. Allow one controller update cycle (half second)
         # '*WAI\r\n'?
 
+    @staticmethod
+    def how_many_digits_after_dot(s: str) -> int | None:
+        s = s.strip()
+        dot_index = s.find(".")
+        if dot_index == -1:
+            return None
+        return len(s) - dot_index - 1
+
     def _update(self) -> dict[str, str]:
+        set_point = self.query_resource("SETP?")
+        match LakeShore330.how_many_digits_after_dot(set_point):
+            case None:
+                set_point_unit = ""
+            case 1 | 2:
+                set_point_unit = "K"
+            case _:
+                set_point_unit = "V"
+        ramps = self.query_resource("RAMPS?")
+        ramp_rate = self.query_resource("RAMPR?") if ramps.strip() == "1" else "0"
         return {
             "sample": self.query_resource("SDAT?"),
             "control": self.query_resource("CDAT?"),
+            "set_point": set_point,
+            "set_point_unit": set_point_unit,
+            "ramp_rate": ramp_rate,
         }

@@ -93,7 +93,7 @@ devices:
       - q: "FILT?"
         r: "1"
       - q: "RAMPS?"
-        r: "0"
+        r: "{RANDOM(0, 1, 1):.0f}"
       - q: "RANG?"
         r: "0"
       - q: "SETP?"
@@ -133,7 +133,7 @@ devices:
           q: "RAMP {:d}"
         specs: { min: 0, max: 1, type: int }
       ramp_rate:
-        default: 10.0
+        default: 12.3
         getter:
           q: "RAMPR?"
           r: "{:.1f}"

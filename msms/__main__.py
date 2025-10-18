@@ -1,4 +1,5 @@
 import logging
+import signal
 import sys
 import time
 
@@ -45,6 +46,7 @@ def ui() -> None:
 
     app = QtWidgets.QApplication([])
     win = MainWindow()
+    signal.signal(signal.SIGINT, lambda *_: win.close())
     win.show()
     sys.exit(app.exec())
 

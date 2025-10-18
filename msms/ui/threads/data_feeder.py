@@ -3,6 +3,7 @@ import threading
 import time
 
 import numpy as np
+from PyQt6 import QtCore
 
 from msms.connectivity.data_collector import DataCollector
 from msms.connectivity.visa import get_visa_library
@@ -53,13 +54,17 @@ class ThreadedGrowingDataHolder:
             self._data = new_data
 
 
-class DataFeeder(threading.Thread):
+class DataFeeder(QtCore.QObject, threading.Thread):
+    updated = QtCore.pyqtSignal(object)
+
     def __init__(
         self,
         interval: float = 0.5,
         stop_event: threading.Event | None = None,
     ) -> None:
-        super().__init__(daemon=True)
+        QtCore.QObject.__init__(self)
+        threading.Thread.__init__(self, daemon=True)
+
         self._interval = interval
         self._interval_lock = threading.Lock()
         self._stop_event = stop_event or threading.Event()
@@ -97,13 +102,17 @@ class DataFeeder(threading.Thread):
             collector.discover_devices()
             collector.initialize_devices()
             data = collector.collect_data()
-            self.data_holder.initialize(list(data.keys()))
+            self.data_holder.initialize([*data.keys(), "time", "number"])
+            t0 = time.time()
+            number = 0
             while True:
                 self.wait_for_next_cycle()
                 logger.info("Generating new data sample")
                 data = collector.collect_data()
+                data["time"] = float(data["timestamp"]) - t0
+                data["number"] = (number := number + 1)
                 self.data_holder.append([v if isinstance(v, float) else float("nan") for v in data.values()])
-                # TODO: just throw it into disk  # noqa: FIX002
+                self.updated.emit(data)
         except StopExecution:
             logger.info("Data feeder stopped")
         finally:

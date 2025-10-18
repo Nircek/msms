@@ -6,15 +6,15 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>600</height>
+    <width>1200</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MSMS</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <layout class="QVBoxLayout" name="verticalLayout" stretch="1,99,1,1">
+   <layout class="QVBoxLayout" name="_2" stretch="0">
     <property name="spacing">
      <number>2</number>
     </property>
@@ -31,101 +31,380 @@
      <number>4</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" name="controlsLayout">
-      <property name="spacing">
-       <number>10</number>
-      </property>
+     <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1,0">
       <item>
-       <widget class="QCheckBox" name="followCheckBox">
-        <property name="text">
-         <string>Auto-follow latest</string>
+       <layout class="QVBoxLayout" name="leftPane" stretch="0,0,0,10">
+        <property name="spacing">
+         <number>0</number>
         </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
+        <item>
+         <widget class="QWidget" name="experimentStatusLayoutWidget" native="true">
+          <property name="minimumSize">
+           <size>
+            <width>300</width>
+            <height>0</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="experimentStatusLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="leftMargin">
+            <number>4</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>4</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <layout class="QHBoxLayout" name="row1">
+             <item>
+              <widget class="QLabel" name="timeValue">
+               <property name="styleSheet">
+                <string notr="true">font-size: 32pt; font-weight: 700;</string>
+               </property>
+               <property name="text">
+                <string>21:37:15</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="numberValue">
+               <property name="styleSheet">
+                <string notr="true">font-size: 32pt; font-weight: 700;</string>
+               </property>
+               <property name="text">
+                <string>#12345</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="row2">
+             <item>
+              <widget class="QLabel" name="sampleLabel">
+               <property name="styleSheet">
+                <string notr="true">font-size: 9pt;</string>
+               </property>
+               <property name="text">
+                <string>Sample</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="controlLabel">
+               <property name="styleSheet">
+                <string notr="true">font-size: 9pt;</string>
+               </property>
+               <property name="text">
+                <string>Control</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="row3">
+             <item>
+              <widget class="QLabel" name="sampleValue">
+               <property name="styleSheet">
+                <string notr="true">font-size: 32pt; font-weight: 700;</string>
+               </property>
+               <property name="text">
+                <string>297.12K</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="controlValue">
+               <property name="styleSheet">
+                <string notr="true">font-size: 32pt; font-weight: 700;</string>
+               </property>
+               <property name="text">
+                <string>300.03K</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="row4">
+             <item>
+              <widget class="QLabel" name="setPointLabel">
+               <property name="styleSheet">
+                <string notr="true">font-size: 9pt;</string>
+               </property>
+               <property name="text">
+                <string>Set point</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="rampLabel">
+               <property name="styleSheet">
+                <string notr="true">font-size: 9pt;</string>
+               </property>
+               <property name="text">
+                <string> Ramp rate</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="row5">
+             <item>
+              <widget class="QLabel" name="setPointValue">
+               <property name="styleSheet">
+                <string notr="true">font-size: 32pt; font-weight: 700;</string>
+               </property>
+               <property name="text">
+                <string>350.0K</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="rampValue">
+               <property name="styleSheet">
+                <string notr="true">font-size: 32pt; font-weight: 700;</string>
+               </property>
+               <property name="text">
+                <string>0.1K/s</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextEdit" name="experimentPlanTextEdit">
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>60</height>
+           </size>
+          </property>
+          <property name="cursor" stdset="0">
+           <cursorShape>ArrowCursor</cursorShape>
+          </property>
+          <property name="html">
+           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;CURRENT: &lt;/span&gt;waiting: 350±1&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;NEXT:          &lt;/span&gt;waiting: stabilize&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::TextInteractionFlag::NoTextInteraction</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="doActionPushButton">
+          <property name="text">
+           <string>DO ACTION</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPlainTextEdit" name="commentPlainTextEdit">
+          <property name="plainText">
+           <string>#
+#
+#
+#
+#
+#
+#
+#
+#</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QLabel" name="intervalLabel">
-        <property name="text">
-         <string>Interval (s):</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="centerPane" stretch="1,0">
+        <item>
+         <widget class="PlotWidget" name="plotWidget" native="true"/>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="chartConfig" stretch="0,1">
+          <property name="spacing">
+           <number>16</number>
+          </property>
+          <item>
+           <widget class="QCheckBox" name="autoFollowCheckBox">
+            <property name="text">
+             <string>Follow</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="chartConfigPushButton">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>CHART</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QDoubleSpinBox" name="intervalSpinBox">
-        <property name="decimals">
-         <number>2</number>
-        </property>
-        <property name="minimum">
-         <double>0.010000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>10.000000000000000</double>
-        </property>
-        <property name="singleStep">
-         <double>0.100000000000000</double>
-        </property>
-        <property name="value">
-         <double>0.500000000000000</double>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QPushButton" name="startStopButton">
-        <property name="text">
-         <string>Start</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-      <item>
-       <widget class="QComboBox" name="chartComboBox"/>
+       <layout class="QVBoxLayout" name="rightPane">
+        <item>
+         <widget class="QTextEdit" name="variablesTextEdit">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>120</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <property name="cursor" stdset="0">
+           <cursorShape>ArrowCursor</cursorShape>
+          </property>
+          <property name="html">
+           <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+&lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;meta charset=&quot;utf-8&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
+p, li { white-space: pre-wrap; }
+hr { height: 1px; border-width: 0; }
+li.unchecked::marker { content: &quot;\2610&quot;; }
+li.checked::marker { content: &quot;\2612&quot;; }
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;Interval [s]:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;3 s&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;AUX0 [V]:&lt;/p&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;1.3333e-7&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          </property>
+          <property name="textInteractionFlags">
+           <set>Qt::TextInteractionFlag::NoTextInteraction</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>
-    <item>
-     <widget class="PlotWidget" name="plotWidget" native="true"/>
-    </item>
-    <item>
-     <widget class="QTextBrowser" name="logTextBrowser">
-      <property name="minimumSize">
-       <size>
-        <width>0</width>
-        <height>70</height>
-       </size>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>12</pointsize>
-       </font>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="infoLabel">
-      <property name="text">
-       <string/>
-      </property>
-      <property name="indent">
-       <number>8</number>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1200</width>
+     <height>33</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuselect_devices">
+    <property name="title">
+     <string>MSMS</string>
+    </property>
+    <addaction name="actionSelectDevices"/>
+    <addaction name="actionManageExperiment"/>
+    <addaction name="actionDescribe"/>
+    <addaction name="separator"/>
+    <addaction name="actionRestoreLastFile"/>
+    <addaction name="actionExport"/>
+    <addaction name="separator"/>
+    <addaction name="actionHelp"/>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuselect_devices"/>
+  </widget>
+  <action name="actionSelectDevices">
+   <property name="text">
+    <string>select devices</string>
+   </property>
+  </action>
+  <action name="actionManageExperiment">
+   <property name="text">
+    <string>manage experiment</string>
+   </property>
+  </action>
+  <action name="actionDescribe">
+   <property name="text">
+    <string>describe</string>
+   </property>
+  </action>
+  <action name="actionExport">
+   <property name="text">
+    <string>export</string>
+   </property>
+  </action>
+  <action name="actionRestoreLastFile">
+   <property name="text">
+    <string>restore last file</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>help</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>about</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -136,25 +415,5 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections>
-  <connection>
-   <sender>intervalSpinBox</sender>
-   <signal>valueChanged(double)</signal>
-   <receiver>MainWindow</receiver>
-   <slot>on_intervalSpinBox_valueChanged(double)</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>236</x>
-     <y>20</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>499</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
- <slots>
-  <slot>on_intervalSpinBox_valueChanged(double)</slot>
- </slots>
+ <connections/>
 </ui>

@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def setup_logging() -> None:
-    log_level = logging.INFO
+    log_level = logging.DEBUG
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
 
