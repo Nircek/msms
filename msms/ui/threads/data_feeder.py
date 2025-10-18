@@ -54,20 +54,15 @@ class ThreadedGrowingDataHolder:
             self._data = new_data
 
 
-class DataFeeder(QtCore.QObject, threading.Thread):
+class DataFeeder(QtCore.QObject):
+    initiated = QtCore.pyqtSignal(object)
     updated = QtCore.pyqtSignal(object)
 
-    def __init__(
-        self,
-        interval: float = 0.5,
-        stop_event: threading.Event | None = None,
-    ) -> None:
-        QtCore.QObject.__init__(self)
-        threading.Thread.__init__(self, daemon=True)
-
+    def __init__(self, interval: float = 0.5) -> None:
+        super().__init__()
+        self._is_running = False
         self._interval = interval
         self._interval_lock = threading.Lock()
-        self._stop_event = stop_event or threading.Event()
         self._last_cycle_time = 0.0
         self.data_holder = ThreadedGrowingDataHolder()
 
@@ -83,7 +78,7 @@ class DataFeeder(QtCore.QObject, threading.Thread):
 
     def wait_for_next_cycle(self) -> None:
         while True:
-            if self._stop_event.is_set():
+            if not self._is_running:
                 raise StopExecution()
             time_to_next_cycle = self._last_cycle_time + self.interval - time.time()
             if time_to_next_cycle <= 0:
@@ -92,6 +87,7 @@ class DataFeeder(QtCore.QObject, threading.Thread):
             time.sleep(min(1.0, time_to_next_cycle))
 
     def run(self) -> None:
+        self._is_running = True
         visa_library = get_visa_library()
         logger.info("Using VISA library: %s", visa_library)
 
@@ -102,7 +98,9 @@ class DataFeeder(QtCore.QObject, threading.Thread):
             collector.discover_devices()
             collector.initialize_devices()
             data = collector.collect_data()
-            self.data_holder.initialize([*data.keys(), "time", "number"])
+            columns = [*data.keys(), "time", "number"]
+            self.data_holder.initialize(columns)
+            self.initiated.emit(columns)
             t0 = time.time()
             number = 0
             while True:
@@ -119,4 +117,4 @@ class DataFeeder(QtCore.QObject, threading.Thread):
             collector.cleanup()
 
     def stop(self) -> None:
-        self._stop_event.set()
+        self._is_running = False

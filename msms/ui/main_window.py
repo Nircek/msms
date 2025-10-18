@@ -1,4 +1,3 @@
-import contextlib
 import logging
 from datetime import timedelta
 from pathlib import Path
@@ -41,25 +40,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.commentPlainTextEdit: QtWidgets.QPlainTextEdit
         self.variablesTextEdit: QtWidgets.QTextEdit
 
-        # FIXME: use a signal/slot to get notified about columns  # noqa: FIX001
-        self.chart_columns = [
-            "timestamp",
-            "time",
-            "dt",
-            "volt:dc",
-            "X",
-            "Y",
-            "AUX1",
-            "AUX2",
-            "AUX3",
-            "AUX4",
-            "sample",
-            "control",
-        ]
+        self.chart_columns = ["time", "number", "dt"]
         self.current_chart_column = "timestamp"
 
         self.data_feeder: DataFeeder | None = None
-        self.default_interval = 0.5
+        self.current_interval = 0.5
 
         pg.setConfigOptions(antialias=True)
 
@@ -138,31 +123,41 @@ class MainWindow(QtWidgets.QMainWindow):
         for interval in [0.1, 0.5, 1.0, 2.0, 5.0]:
             action = QtGui.QAction(f"{interval} s", self)
             action.setCheckable(True)
-            action.setChecked(interval == self.default_interval)
+            action.setChecked(interval == self.current_interval)
             action.triggered.connect(lambda _, val=interval: self._set_interval(val))
             interval_menu.addAction(action)
 
         menu.exec(QtGui.QCursor.pos())
 
     def _start_data_feeder(self) -> None:
-        logger.info("Starting data feeder with interval %.2f", self.default_interval)
-        self.data_feeder = DataFeeder(interval=self.default_interval)
+        logger.info("Starting data feeder with interval %.2f", self.current_interval)
+        self.thread_data_feeder = QtCore.QThread()
+        self.data_feeder = DataFeeder(interval=self.current_interval)
+        self.data_feeder.moveToThread(self.thread_data_feeder)
+        self.data_feeder.initiated.connect(self.on_data_feeder_initiated)
         self.data_feeder.updated.connect(self.on_data_feeder_updated)
-        self.data_feeder.start()
+        self.thread_data_feeder.started.connect(self.data_feeder.run)
+        self.thread_data_feeder.start()
         self.doActionPushButton.setText("STOP")
 
     def _stop_data_feeder(self) -> None:
         logger.info("Stopping data feeder")
         if self.data_feeder is not None:
             self.data_feeder.stop()
+            self.thread_data_feeder.quit()
         self.data_feeder = None
         self.doActionPushButton.setText("DO ACTION")
 
     def _set_interval(self, value: float) -> None:
         logger.info("Changing data feeder interval to %.2f", value)
-        self.default_interval = value
+        self.current_interval = value
         if self.data_feeder is not None:
             self.data_feeder.interval = value
+
+    def on_data_feeder_initiated(self, columns: list[str]) -> None:
+        logger.info("Data feeder initiated with columns: %s", columns)
+        self.chart_columns = columns
+        assert self.current_chart_column in self.chart_columns
 
     def on_data_feeder_updated(self, data: dict[str, float | str]) -> None:
         time = str(timedelta(seconds=int(data.get("time", 0))))
@@ -242,8 +237,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         if self.data_feeder is not None:
-            with contextlib.suppress(Exception):
-                logger.info("Stopping data feeder on exit")
-                self.data_feeder.stop()
+            logger.info("Stopping data feeder on exit")
+            self.thread_data_feeder.quit()
+            self.thread_data_feeder.wait(100)
         if event:
             event.accept()
