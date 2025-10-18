@@ -82,16 +82,16 @@ class DataCollector:
             except Exception:
                 logger.exception("Failed to initialize device: %s", device.short_display_name)
 
-    def collect_data(self) -> dict[str, str | float]:
+    def collect_data(self) -> dict[str, str]:
         logger.info("Starting data collection loop iteration")
         t0 = time()
-        results: dict[str, str | float] = {}
+        results: dict[str, str] = {}
         for device in self.devices:
             try:
                 results.update(device.update())
             except Exception:
                 logger.exception("Failed to update device: %s", device.short_display_name)
-        return {"timestamp": time(), "dt": round(1000 * (time() - t0), 1), **results}
+        return {"timestamp": str(time()), "dt": f"{1000 * (time() - t0):.1f}", **results}
 
     def cleanup(self) -> None:
         for device in self.devices:

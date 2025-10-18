@@ -7,7 +7,7 @@ import numpy as np
 import pyqtgraph as pg  # type: ignore
 from PyQt6 import QtCore, QtGui, QtWidgets, uic
 
-from msms.ui.threads.data_feeder import DataFeeder
+from msms.ui.managers import DeviceManager, StorageManager
 
 if TYPE_CHECKING:
     from pyqtgraph.graphicsItems.ViewBox.ViewBox import ViewBox  # type: ignore
@@ -15,16 +15,16 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class MainWindow(QtWidgets.QMainWindow):
+class MainWindowUic(QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
 
         ui_file = Path(__file__).parent / "main_window.ui"
         uic.loadUi(str(ui_file), self)
         self.center_on_screen()
-        self.fix_clicked_signal("chartConfigPushButton")
-        self.fix_clicked_signal("doActionPushButton")
-        self.on_data_feeder_updated({})
+        self.fix_slot_signal("chartConfigPushButton", "clicked")
+        self.fix_slot_signal("doActionPushButton", "clicked")
+        self.fix_slot_signal("actionRestoreLastFile", "triggered")
         self.autoFollowCheckBox: QtWidgets.QCheckBox
         self.chartConfigPushButton: QtWidgets.QPushButton
         self.doActionPushButton: QtWidgets.QPushButton
@@ -39,12 +39,52 @@ class MainWindow(QtWidgets.QMainWindow):
         self.experimentPlanTextEdit: QtWidgets.QTextEdit
         self.commentPlainTextEdit: QtWidgets.QPlainTextEdit
         self.variablesTextEdit: QtWidgets.QTextEdit
+        self.actionRestoreLastFile: QtGui.QAction
 
+    def fix_slot_signal(self, widget_name: str, signal_name: str) -> None:
+        widget = self.findChild((QtWidgets.QPushButton, QtGui.QAction), widget_name)
+        slot = getattr(self, f"on_{widget_name}_{signal_name}", None)
+        widget_slot = getattr(widget, signal_name, None)
+        assert widget is not None
+        assert widget_slot is not None
+        assert widget.receivers(widget_slot) > 1
+        assert slot is not None
+        # UIC keeps connecting `clicked` and `clicked(bool)` and we need to disconnect all of them
+        widget_slot.disconnect()
+        widget_slot.connect(slot)
+
+    def center_on_screen(self) -> None:
+        screen = QtWidgets.QApplication.primaryScreen()
+        assert screen is not None
+        screen_geometry = screen.availableGeometry()
+        window_geometry = self.frameGeometry()
+        window_geometry.moveCenter(screen_geometry.center())
+        self.move(window_geometry.topLeft())
+
+
+class MainWindow(MainWindowUic):
+    def __init__(self) -> None:
+        super().__init__()
+        self.on_storage_manager_new_data_row({})  # initialize labels
         self.chart_columns = ["time", "number", "dt"]
         self.current_chart_column = "timestamp"
 
-        self.data_feeder: DataFeeder | None = None
+        self.device_manager = DeviceManager()
+        self.storage_manager = StorageManager()
         self.current_interval = 0.5
+        self.device_manager_thread = QtCore.QThread()
+        self.device_manager.moveToThread(self.device_manager_thread)
+        self.device_manager_thread.started.connect(self.device_manager.run)
+        self.storage_manager_thread = QtCore.QThread()
+        self.storage_manager.moveToThread(self.storage_manager_thread)
+        self.storage_manager_thread.started.connect(self.storage_manager.setup)
+
+        self.device_manager.initiated.connect(self.storage_manager.set_header)
+        self.device_manager.initiated.connect(self.on_columns_change)  # we should get columns only from storage manager
+        self.device_manager.updated.connect(self.storage_manager.on_data_append)
+        self.storage_manager.new_data_row.connect(self.on_storage_manager_new_data_row)
+        self.storage_manager.old_file_load.connect(self.on_columns_change)
+        self.storage_manager_thread.start()
 
         pg.setConfigOptions(antialias=True)
 
@@ -69,23 +109,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self._last_user_yrange: list[float] | None = None
         self._programmatic_update = False
 
-    def fix_clicked_signal(self, push_button_name: str) -> None:
-        push_button = self.findChild(QtWidgets.QPushButton, push_button_name)
-        slot = getattr(self, f"on_{push_button_name}_clicked", None)
-        assert push_button is not None
-        assert push_button.receivers(push_button.clicked) > 1
-        assert slot is not None
-        # UIC keeps connecting `clicked` and `clicked(bool)` and we need to disconnect all of them
-        push_button.clicked.disconnect()
-        push_button.clicked.connect(slot)
-
-    def center_on_screen(self) -> None:
-        screen = QtWidgets.QApplication.primaryScreen()
-        assert screen is not None
-        screen_geometry = screen.availableGeometry()
-        window_geometry = self.frameGeometry()
-        window_geometry.moveCenter(screen_geometry.center())
-        self.move(window_geometry.topLeft())
+    def on_actionRestoreLastFile_triggered(self) -> None:
+        logger.info("Restoring last used file...")
+        last_file = self.storage_manager.get_last_used_file()
+        if last_file is not None and last_file.exists():
+            logger.info("Restoring last used file: %s", last_file)
+            self.storage_manager.load_old_file(last_file)
+            comment = self.storage_manager.description
+            self.commentPlainTextEdit.setPlainText(comment)
+        else:
+            logger.info("No last used file to restore.")
 
     def on_chartConfigPushButton_clicked(self) -> None:
         menu = QtWidgets.QMenu(self)
@@ -107,15 +140,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def on_doActionPushButton_clicked(self) -> None:
         menu = QtWidgets.QMenu(self)
 
-        if self.data_feeder is not None:
+        if self.device_manager._is_running:
             stop_action = QtGui.QAction("Stop", self)
-            stop_action.triggered.connect(self._stop_data_feeder)
+            stop_action.triggered.connect(self._stop_device_manager)
             menu.addAction(stop_action)
         else:
             start_action = QtGui.QAction("Start", self)
-            start_action.triggered.connect(self._start_data_feeder)
+            start_action.triggered.connect(self._start_device_manager)
             menu.addAction(start_action)
 
+        menu.addSeparator()
+        export_action = QtGui.QAction("Export Data to CSV...", self)
+        export_action.triggered.connect(self._export_data_to_csv)
+        menu.addAction(export_action)
         menu.addSeparator()
 
         interval_menu = QtWidgets.QMenu("Set Interval", self)
@@ -129,39 +166,43 @@ class MainWindow(QtWidgets.QMainWindow):
 
         menu.exec(QtGui.QCursor.pos())
 
-    def _start_data_feeder(self) -> None:
-        logger.info("Starting data feeder with interval %.2f", self.current_interval)
-        self.thread_data_feeder = QtCore.QThread()
-        self.data_feeder = DataFeeder(interval=self.current_interval)
-        self.data_feeder.moveToThread(self.thread_data_feeder)
-        self.data_feeder.initiated.connect(self.on_data_feeder_initiated)
-        self.data_feeder.updated.connect(self.on_data_feeder_updated)
-        self.thread_data_feeder.started.connect(self.data_feeder.run)
-        self.thread_data_feeder.start()
+    def _start_device_manager(self) -> None:
+        logger.info("Starting device manager with interval %.2f", self.current_interval)
+        self.device_manager.interval = self.current_interval
+        self.device_manager_thread.start()
         self.doActionPushButton.setText("STOP")
 
-    def _stop_data_feeder(self) -> None:
-        logger.info("Stopping data feeder")
-        if self.data_feeder is not None:
-            self.data_feeder.stop()
-            self.thread_data_feeder.quit()
-        self.data_feeder = None
+    def _stop_device_manager(self) -> None:
+        logger.info("Stopping device manager")
+        self.device_manager.stop()
+        self.device_manager_thread.quit()
+        self.device_manager_thread.wait(100)
         self.doActionPushButton.setText("DO ACTION")
 
-    def _set_interval(self, value: float) -> None:
-        logger.info("Changing data feeder interval to %.2f", value)
-        self.current_interval = value
-        if self.data_feeder is not None:
-            self.data_feeder.interval = value
+    def _export_data_to_csv(self) -> None:
+        dialog = QtWidgets.QFileDialog(self)
+        dialog.setWindowTitle("Export Data to CSV")
+        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptSave)
+        dialog.setNameFilter("CSV Files (*.csv)")
+        dialog.setDefaultSuffix("csv")
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            export_path = Path(dialog.selectedFiles()[0])
+            logger.info("Exporting data to CSV file: %s", export_path)
+            self.storage_manager.export_to_csv(export_path)
 
-    def on_data_feeder_initiated(self, columns: list[str]) -> None:
-        logger.info("Data feeder initiated with columns: %s", columns)
+    def _set_interval(self, value: float) -> None:
+        logger.info("Changing device manager interval to %.2f", value)
+        self.current_interval = value
+        self.device_manager.interval = value
+
+    def on_columns_change(self, columns: list[str]) -> None:
+        logger.info("Device manager initiated with columns: %s", columns)
         self.chart_columns = columns
         assert self.current_chart_column in self.chart_columns
 
-    def on_data_feeder_updated(self, data: dict[str, float | str]) -> None:
+    def on_storage_manager_new_data_row(self, data: dict[str, float | str]) -> None:
         time = str(timedelta(seconds=int(data.get("time", 0))))
-        no = f"#{data.get('number', 0):d}"
+        no = f"#{data.get('row_number', 0):.0f}"
         self.timeValue.setText(time)
         self.numberValue.setText(no)
 
@@ -181,6 +222,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.experimentStatusLayoutWidget.setMinimumWidth(
             max(self.experimentStatusLayoutWidget.minimumWidth(), self.experimentStatusLayoutWidget.sizeHint().width())
         )
+
+        self.variablesTextEdit.setPlainText("\n\n".join(f"{k}:\n{v!r}" for k, v in data.items()))
 
     def on_plotWidget_sigXRangeChanged(self, _view_box: ViewBox, range_: list[float]) -> None:
         if self._programmatic_update:
@@ -212,14 +255,17 @@ class MainWindow(QtWidgets.QMainWindow):
             # keep _programmatic_update flag set for a bit longer to catch Y auto-range changes
             QtCore.QTimer.singleShot(150, lambda: setattr(self, "_programmatic_update", False))
 
+    def on_commentPlainTextEdit_textChanged(self) -> None:
+        comment = self.commentPlainTextEdit.toPlainText()
+        self.storage_manager.set_description(comment)
+
     def on_timer_timeout(self) -> None:
-        if self.data_feeder is None:
-            return
-        data = self.data_feeder.data_holder.data
+        columns = self.storage_manager.data_holder._columns or []
+        data = self.storage_manager.data_holder.data
         if data.shape == ():
             return
-        x_idx = self.data_feeder.data_holder.columns.index("time")
-        y_idx = self.data_feeder.data_holder.columns.index(self.current_chart_column)
+        x_idx = columns.index("time")
+        y_idx = columns.index(self.current_chart_column)
         size = data.shape[0]
         logger.info("Retrieved %d new samples.", size)
         self.xs = data[:, x_idx]
@@ -236,9 +282,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.plotWidget.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False)
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
-        if self.data_feeder is not None:
-            logger.info("Stopping data feeder on exit")
-            self.thread_data_feeder.quit()
-            self.thread_data_feeder.wait(100)
+        self._stop_device_manager()
+        self.storage_manager.stop()
+        self.storage_manager_thread.quit()
+        self.storage_manager_thread.wait(100)
         if event:
             event.accept()

@@ -36,5 +36,5 @@ class RSDM3055A(DeviceBase):
         # MEAS:...? takes about a second
         # CONF takes about a second but then it is pretty fast to get one READ?
 
-    def _update(self) -> dict[str, str]:
+    def update(self) -> dict[str, str]:
         return {"volt:dc": self.query_resource("READ?")}

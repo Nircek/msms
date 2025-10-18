@@ -17,14 +17,6 @@ if TYPE_CHECKING:
 DEVICE_NOT_INITIALIZED_ERROR = "Device not initialized"
 
 
-def to_float(s: str) -> str | float:
-    s = s.strip()
-    try:
-        return float(s)
-    except ValueError:
-        return s
-
-
 class DeviceBase(ABC):
     initials: str = ""
     short_display_name: str = ""
@@ -50,11 +42,8 @@ class DeviceBase(ABC):
         pass
 
     @abstractmethod
-    def _update(self) -> dict[str, str]:
+    def update(self) -> dict[str, str]:
         pass
-
-    def update(self) -> dict[str, str | float]:
-        return {k: to_float(v) for k, v in self._update().items()}
 
     @contextmanager
     def error_cool_down_context_manager(

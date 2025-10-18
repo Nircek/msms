@@ -48,7 +48,7 @@ class LockInSr830(DeviceBase):
         self.command_resource(long_cmd)
         print([self.read_resource().strip() for _ in cmds])
 
-    def _update(self) -> dict[str, str]:
+    def update(self) -> dict[str, str]:
         data = self.query_resource("SNAP?1,2,5,6,7,8").split(",")
         return {
             "X": data[0],

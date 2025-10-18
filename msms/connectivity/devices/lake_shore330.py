@@ -63,7 +63,7 @@ class LakeShore330(DeviceBase):
             return None
         return len(s) - dot_index - 1
 
-    def _update(self) -> dict[str, str]:
+    def update(self) -> dict[str, str]:
         set_point = self.query_resource("SETP?")
         match LakeShore330.how_many_digits_after_dot(set_point):
             case None:
@@ -78,6 +78,6 @@ class LakeShore330(DeviceBase):
             "sample": self.query_resource("SDAT?"),
             "control": self.query_resource("CDAT?"),
             "set_point": set_point,
-            "set_point_unit": set_point_unit,
+            "_set_point_unit": set_point_unit,
             "ramp_rate": ramp_rate,
         }

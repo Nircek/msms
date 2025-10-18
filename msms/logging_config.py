@@ -3,14 +3,21 @@ import logging.handlers
 from datetime import UTC, datetime
 from pathlib import Path
 
+init_timestamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
+logs_dir = Path("logs")
+
+
+def get_logs_file_path(suffix: str, prefix: str | None = None) -> Path:
+    logs_dir.mkdir(exist_ok=True)
+    if prefix is None:
+        prefix = f"msms_{init_timestamp}"
+    file_name = f"{prefix}{suffix}"
+    return logs_dir / file_name
+
 
 def setup_logging() -> None:
     log_level = logging.DEBUG
-    logs_dir = Path("logs")
-    logs_dir.mkdir(exist_ok=True)
-
-    timestamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
-    log_file_path = logs_dir / f"msms_{timestamp}.log"
+    log_file_path = get_logs_file_path(".log")
 
     formatter = logging.Formatter(
         fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
