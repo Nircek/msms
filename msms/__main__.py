@@ -3,9 +3,9 @@ import signal
 import sys
 import time
 
-from PyQt6 import QtWidgets
+from PyQt6 import QtCore, QtWidgets
 
-from msms.connectivity.data_collector import DataCollector
+from msms.connectivity.device_repository import DeviceRepository
 from msms.connectivity.visa import get_visa_library
 from msms.logging_config import setup_logging
 from msms.ui.main_window import MainWindow
@@ -21,17 +21,19 @@ def main() -> None:
         visa_library = get_visa_library()
         logger.info("Using VISA library: %s", visa_library)
 
-        collector = DataCollector(visa_library)
+        repository = DeviceRepository(visa_library)
 
-        collector.initialize_visa()
+        repository.initialize_visa()
         try:
-            collector.discover_devices()
-            collector.initialize_devices()
+            devices = repository.discover_devices()
+            repository.set_selected_addresses([device.address for device in devices])
+            repository.prepare_devices()
+            repository.initialize_devices()
             while True:
                 time.sleep(2)
-                print(collector.collect_data())
+                print(repository.collect_data())
         finally:
-            collector.cleanup()
+            repository.close()
         logger.info("MSMS application completed successfully")
     except Exception:
         logger.exception("MSMS application failed")
@@ -44,11 +46,26 @@ def ui() -> None:
     logger = logging.getLogger(__name__)
     logger.info("Starting MSMS application")
 
-    app = QtWidgets.QApplication([])
+    app = QtWidgets.QApplication.instance()
+    if app is None:
+        app = QtWidgets.QApplication([])
+
     win = MainWindow()
-    signal.signal(signal.SIGINT, lambda *_: win.close())
+
+    def handle_sigint(*_: object) -> None:
+        logger.info("SIGINT received, shutting down UI")
+        win.close()
+
+    signal.signal(signal.SIGINT, handle_sigint)
+    timer = QtCore.QTimer()  # timer trick to make Python handle signals
+    timer.timeout.connect(lambda: None)
+    timer.start(2147483647)
+
     win.show()
-    sys.exit(app.exec())
+    exit_code = app.exec()
+    if win.isVisible():
+        win.close()
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

@@ -15,8 +15,7 @@ def get_logs_file_path(suffix: str, prefix: str | None = None) -> Path:
     return logs_dir / file_name
 
 
-def setup_logging() -> None:
-    log_level = logging.DEBUG
+def setup_logging(log_level: int = logging.DEBUG) -> None:
     log_file_path = get_logs_file_path(".log")
 
     formatter = logging.Formatter(

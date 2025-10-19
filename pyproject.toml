@@ -26,6 +26,7 @@ name = "Marcin Zepp"
 
 [project.scripts]
 msms = "msms.__main__:main"
+test = "msms.tests.smoke:main"
 ui = "msms.__main__:ui"
 
 [tool.mypy]
