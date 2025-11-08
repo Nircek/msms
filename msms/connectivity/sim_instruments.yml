@@ -96,8 +96,6 @@ devices:
         r: "{RANDOM(0, 1, 1):.0f}"
       - q: "RANG?"
         r: "0"
-      - q: "SETP?"
-        r: "{RANDOM(10, 300, 1):.2f}"
       - q: "CDAT?"
         r: "{RANDOM(20, 300, 1):.2f}"
         # r: "ER27"

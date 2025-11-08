@@ -32,6 +32,11 @@ class DeviceBase(ABC):
         self._error_cool_down_time = 0.0
         self._error_cool_down_cause: str | None = None
 
+    @property
+    def resource_address(self) -> str:
+        """Get the VISA resource address of this device."""
+        return self._resource.resource_name
+
     @classmethod
     @abstractmethod
     def can_handle(cls, idn_parts: GpibIdnParts) -> bool:
@@ -72,9 +77,9 @@ class DeviceBase(ABC):
             self._resource.close()
         del self._resource
 
-    def command_resource(self, cmd: str) -> None:
+    def command_resource(self, cmd: str, force: bool = False) -> None:
         self._last_command_time = self._last_read_time = time()
-        with self.error_cool_down_context_manager():
+        with self.error_cool_down_context_manager(bypass=force):
             self._resource.write(cmd)
         t1 = time()
         print(f"{self.initials}: {cmd!r} -- [{t1 - self._last_command_time:.1f}ms, T0]")

@@ -34,6 +34,7 @@ class DeviceRepository:
         self._resource_manager: pyvisa.ResourceManager | None = None
         self._devices: list[DeviceBase] = []
         self._selected_addresses: set[str] = set()
+        self._devices_info: dict[str, DiscoveredDevice] = {}
 
     def initialize_visa(self) -> None:
         """Initialise the VISA resource manager if it is not ready yet."""
@@ -100,6 +101,8 @@ class DeviceRepository:
 
             discovered.append(DiscoveredDevice(resource_name, idn, device_name))
 
+        self._devices_info = {dev.address: dev for dev in discovered}
+
         return discovered
 
     def set_selected_addresses(self, addresses: list[str]) -> None:
@@ -129,6 +132,12 @@ class DeviceRepository:
         missing_addresses = self._selected_addresses - set(resources)
         if missing_addresses:
             logger.warning("Selected addresses no longer available: %s", sorted(missing_addresses))
+            msg = "Some selected device addresses are not available"
+            raise RuntimeError(msg)
+
+        device_info_to_delete = set(self._devices_info.keys()) - self._selected_addresses
+        for addr in device_info_to_delete:
+            del self._devices_info[addr]
 
         for resource_name in resources:
             if resource_name not in self._selected_addresses:
@@ -164,6 +173,9 @@ class DeviceRepository:
             )
             self._devices.append(device_instance)
 
+    def get_devices_info(self) -> dict[str, DiscoveredDevice]:
+        return self._devices_info
+
     def initialize_devices(self) -> None:
         """Run device-specific initialization hooks."""
 
@@ -190,6 +202,22 @@ class DeviceRepository:
             except Exception:
                 logger.exception("Failed to update device: %s", device.short_display_name)
         return {"timestamp": str(time()), "dt": f"{1000 * (time() - t0):.1f}", **results}
+
+    def send_command(self, device_address: str, command: str) -> None:
+        """Send a command to a specific device.
+
+        Args:
+            device_address: VISA address of the target device.
+            command: Command string to send.
+        """
+
+        for device in self._devices:
+            if device.resource_address == device_address:
+                logger.info("Sending command to %s: %s", device.short_display_name, command)
+                device.command_resource(command, force=True)
+                return
+
+        logger.warning("No device found with address %s to send command: %s", device_address, command)
 
     def shutdown_devices(self) -> None:
         """Close all instantiated devices and clear internal state."""

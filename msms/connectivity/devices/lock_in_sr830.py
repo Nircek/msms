@@ -49,6 +49,7 @@ class LockInSr830(DeviceBase):
         print([self.read_resource().strip() for _ in cmds])
 
     def update(self) -> dict[str, str]:
+        phase, frequence, amplitude = (self.query_resource(cmd) for cmd in ("PHAS?", "FREQ?", "SLVL?"))
         data = self.query_resource("SNAP?1,2,5,6,7,8").split(",")
         return {
             "X": data[0],
@@ -57,4 +58,7 @@ class LockInSr830(DeviceBase):
             "AUX2": data[3],
             "AUX3": data[4],
             "AUX4": data[5],
+            "phase": phase,
+            "frequency": frequence,
+            "amplitude": amplitude,
         }

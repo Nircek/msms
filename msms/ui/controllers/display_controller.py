@@ -70,6 +70,10 @@ class DisplayController:
         )
 
         # Variables debug view
+        v_scroll_bar = self.widgets.variables_text.verticalScrollBar()
+        v_scroll = v_scroll_bar.value() if v_scroll_bar is not None else 0
         self.widgets.variables_text.setPlainText("\n\n".join(f"{k}:\n{v!r}" for k, v in data.items()))
+        if v_scroll_bar is not None:
+            v_scroll_bar.setValue(v_scroll)
 
         logger.debug("Display updated with %d data fields", len(data))

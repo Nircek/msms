@@ -6,6 +6,7 @@ from PyQt6 import QtGui, QtWidgets, uic
 
 from msms.ui.controllers.app_controller import ApplicationController
 from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
+from msms.ui.controllers.experiment_controller import ExperimentController
 from msms.ui.controllers.plot_controller import PlotController
 from msms.ui.dialogs import DescriptionDialog, DeviceSelectionDialog, MarkdownViewerDialog
 
@@ -108,6 +109,11 @@ class MainWindow(MainWindowUic):
                 status_layout=self.experimentStatusLayoutWidget,
             )
         )
+        self.experiment_controller = ExperimentController(
+            parent=self,
+            button=self.doActionPushButton,
+            app_controller=self.app_controller,
+        )
 
     def refresh_plot(self) -> None:
         self.plot_controller.refresh_from_repository(self.app_controller.storage_manager.data_repository)
@@ -134,6 +140,7 @@ class MainWindow(MainWindowUic):
             logger.info("Selected devices: %s", selected_addresses)
             self._selected_device_addresses = selected_addresses
             self.app_controller.update_selected_devices(selected_addresses)
+            self.experiment_controller.set_selected_devices(selected_addresses)
         else:
             logger.info("Device selection cancelled")
 
@@ -159,7 +166,7 @@ class MainWindow(MainWindowUic):
 
     def on_actionExport_triggered(self) -> None:
         """Export current data to CSV file."""
-        self._export_data_to_csv()
+        self.experiment_controller.export_data_to_csv()
 
     def on_actionHelp_triggered(self) -> None:
         """Show help dialog with README content."""
@@ -200,72 +207,7 @@ class MainWindow(MainWindowUic):
 
     def on_doActionPushButton_clicked(self) -> None:
         """Show the action menu for controlling acquisition and exports."""
-
-        menu = QtWidgets.QMenu(self)
-
-        if self.app_controller.is_acquiring:
-            stop_action = QtGui.QAction("Stop", self)
-            stop_action.triggered.connect(self._stop_device_manager)
-            menu.addAction(stop_action)
-        else:
-            start_action = QtGui.QAction("Start", self)
-            start_action.triggered.connect(self._start_device_manager)
-            menu.addAction(start_action)
-
-        menu.addSeparator()
-        export_action = QtGui.QAction("Export Data to CSV...", self)
-        export_action.triggered.connect(self._export_data_to_csv)
-        menu.addAction(export_action)
-        menu.addSeparator()
-
-        interval_menu = QtWidgets.QMenu("Set Interval", self)
-        menu.addMenu(interval_menu)
-        for interval_sec in [0.1, 0.5, 1.0, 2.0, 5.0]:
-            interval_ms = int(interval_sec * 1000)
-            action = QtGui.QAction(f"{interval_sec} s", self)
-            action.setCheckable(True)
-            action.setChecked(interval_ms == self.app_controller.current_interval_ms)
-            action.triggered.connect(lambda _, val=interval_ms: self._set_interval(val))
-            interval_menu.addAction(action)
-
-        menu.exec(QtGui.QCursor.pos())
-
-    def _start_device_manager(self) -> None:
-        """Start asynchronous device data acquisition."""
-        if not self._selected_device_addresses:
-            QtWidgets.QMessageBox.warning(
-                self,
-                "Select Devices",
-                "Select at least one device before starting acquisition.",
-            )
-            return
-
-        logger.info("Starting device manager with interval %d ms", self.app_controller.current_interval_ms)
-        self.app_controller.start_acquisition()
-
-    def _stop_device_manager(self) -> None:
-        """Stop acquisition thread and update button label."""
-        logger.info("Stopping device manager")
-        self.app_controller.stop_acquisition()
-
-    def _export_data_to_csv(self) -> None:
-        """Open a save dialog and export the current dataset."""
-
-        dialog = QtWidgets.QFileDialog(self)
-        dialog.setWindowTitle("Export Data to CSV")
-        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptSave)
-        dialog.setNameFilter("CSV Files (*.csv)")
-        dialog.setDefaultSuffix("csv")
-        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            export_path = Path(dialog.selectedFiles()[0])
-            logger.info("Exporting data to CSV file: %s", export_path)
-            self.app_controller.request_export_to_csv(export_path)
-
-    def _set_interval(self, value_ms: int) -> None:
-        """Update device polling interval both in UI state and manager."""
-
-        logger.info("Changing device manager interval to %d ms", value_ms)
-        self.app_controller.set_interval(value_ms)
+        self.experiment_controller.show_action_menu()
 
     def on_columns_change(self, columns: list[str]) -> None:
         """Handle notification that numeric chart columns have changed."""

@@ -13,6 +13,7 @@ class DeviceManager(QtCore.QObject):
     data_initialized = QtCore.pyqtSignal(object)
     data_collected = QtCore.pyqtSignal(object)
     devices_discovered = QtCore.pyqtSignal(object)
+    device_info_collected = QtCore.pyqtSignal(object)
     acquisition_state_changed = QtCore.pyqtSignal(object)
 
     def __init__(self, interval_ms: int = 500) -> None:
@@ -138,6 +139,22 @@ class DeviceManager(QtCore.QObject):
         logger.info("Selected device addresses updated: %s", addresses)
         if self._is_running:
             logger.warning("Updated device selection will apply on the next restart.")
+
+    @QtCore.pyqtSlot()
+    def on_device_info_request(self) -> None:
+        """Request information about the currently selected devices."""
+        device_info = self._repository.get_devices_info()
+        self.device_info_collected.emit(device_info)
+
+    @QtCore.pyqtSlot(object, object)
+    def on_device_command_request(self, device_address: str, command: str) -> None:
+        """Send a command to a specific device."""
+
+        try:
+            self._repository.send_command(device_address, command)
+            logger.info("Sent command to %s: %s", device_address, command)
+        except Exception:
+            logger.exception("Failed to send command to %s: %s", device_address, command)
 
     @QtCore.pyqtSlot(object)
     def on_interval_change_request(self, interval_ms: int) -> None:
