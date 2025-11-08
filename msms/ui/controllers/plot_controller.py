@@ -1,11 +1,13 @@
 """Controller for managing plot visualization and interaction."""
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyqtgraph as pg  # type: ignore
 from PyQt6 import QtCore, QtWidgets
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QGuiApplication
 
 if TYPE_CHECKING:
     from pyqtgraph.graphicsItems.ViewBox.ViewBox import ViewBox  # type: ignore
@@ -27,8 +29,21 @@ class PlotController(QtCore.QObject):
         super().__init__()
         self.plot_widget = plot_widget
         self.auto_follow_checkbox = auto_follow_checkbox
+
+        # Detect system theme and configure colors
+        is_dark_theme = self._is_dark_theme()
+        self._configure_plot_style(is_dark_theme)
+
+        # Create plot item with theme-appropriate colors
+        line_color, marker_color = self._get_plot_colors(is_dark_theme)
         self.plot_item = plot_widget.plot(
-            [], [], pen=pg.mkPen("y", width=1), symbol="+", symbolSize=20, symbolBrush="b"
+            [],
+            [],
+            pen=pg.mkPen(line_color, width=2),
+            symbol="o",
+            symbolSize=8,
+            symbolBrush=marker_color,
+            symbolPen=None,
         )
 
         self.current_column = "timestamp"
@@ -43,11 +58,119 @@ class PlotController(QtCore.QObject):
         self.plot_widget.sigYRangeChanged.connect(self._on_y_range_changed)
         self.auto_follow_checkbox.toggled.connect(self._on_auto_follow_toggled)
 
-        self.plot_widget.showGrid(x=True, y=True)
-        self.plot_widget.setTitle("Temperature vs Time", color="b", size="20pt")
-        styles = {"color": "red", "font-size": "18px"}
-        self.plot_widget.setLabel("left", "Temperature (°C)", **styles)
-        self.plot_widget.setLabel("bottom", "Time (s)", **styles)
+        # Connect to OS theme changes (Qt 6.5+)
+        self._connect_theme_change_signal()
+
+    @staticmethod
+    def _is_dark_theme() -> bool:
+        """Detect if the OS is using a dark theme using Qt6 QStyleHints.
+
+        Returns:
+            True if dark theme is detected, False otherwise.
+        Raises:
+            RuntimeError: If Qt version is older than 6.5 and color scheme detection is not possible.
+        """
+        gui_app = cast("QGuiApplication", QGuiApplication.instance())
+        if gui_app is None:
+            return False
+
+        # Use Qt6's QStyleHints to detect color scheme
+        style_hints = gui_app.styleHints()
+        if style_hints is None:
+            return False
+
+        try:
+            # Qt 6.5+ has colorScheme() method
+            color_scheme = style_hints.colorScheme()
+        except AttributeError as e:
+            msg = "You need Qt6.5+"
+            raise RuntimeError(msg) from e
+            # Fallback for older Qt6 versions: analyze palette luminance
+            palette = gui_app.palette()
+            bg_color = palette.color(palette.ColorRole.Window)
+            luminance_threshold = 0.5
+            luminance = (0.299 * bg_color.red() + 0.587 * bg_color.green() + 0.114 * bg_color.blue()) / 255
+            return luminance < luminance_threshold
+        else:
+            return color_scheme == Qt.ColorScheme.Dark
+
+    @staticmethod
+    def _get_plot_colors(is_dark: bool) -> tuple[str, str]:
+        """Get appropriate plot colors based on theme.
+
+        Args:
+            is_dark: Whether the theme is dark.
+
+        Returns:
+            Tuple of (line_color, marker_color) suitable for the theme.
+        """
+        if is_dark:
+            # Dark theme: bright colors for visibility
+            return "#00D4FF", "#00D4FF"  # Cyan for both line and markers
+        # Light theme: darker colors for contrast
+        return "#1f77b4", "#1f77b4"  # Professional blue
+
+    def _configure_plot_style(self, is_dark: bool) -> None:
+        """Configure plot background, grid, and labels based on theme."""
+        if is_dark:
+            # Dark theme styling
+            self.plot_widget.setBackground("#1e1e1e")
+            text_color = "#e0e0e0"
+        else:
+            # Light theme styling
+            self.plot_widget.setBackground("#ffffff")
+            text_color = "#000000"
+
+        # Configure grid
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
+        self.plot_widget.getPlotItem().getAxis("bottom").setPen(text_color)
+        self.plot_widget.getPlotItem().getAxis("left").setPen(text_color)
+        self.plot_widget.getPlotItem().getAxis("bottom").setTextPen(text_color)
+        self.plot_widget.getPlotItem().getAxis("left").setTextPen(text_color)
+
+        # Set title and labels with appropriate colors
+        self.plot_widget.setTitle("Temperature vs Time", color=text_color, size="14pt")
+        label_styles = {"color": text_color, "font-size": "12pt"}
+        self.plot_widget.setLabel("left", "Temperature (°C)", **label_styles)
+        self.plot_widget.setLabel("bottom", "Time (s)", **label_styles)
+
+    def _connect_theme_change_signal(self) -> None:
+        """Connect to the OS theme change signal to update plot styling dynamically."""
+        gui_app = cast("QGuiApplication", QGuiApplication.instance())
+        if gui_app is None:
+            return
+
+        style_hints = gui_app.styleHints()
+        if style_hints is None:
+            return
+
+        try:
+            # Qt 6.5+ has colorSchemeChanged signal
+            style_hints.colorSchemeChanged.connect(self._on_theme_changed)
+            logger.info("Connected to OS theme change signal")
+        except AttributeError:
+            logger.debug("colorSchemeChanged signal not available (Qt < 6.5)")
+
+    @QtCore.pyqtSlot(Qt.ColorScheme)
+    def _on_theme_changed(self, color_scheme: Qt.ColorScheme) -> None:
+        """Handle OS theme changes and update plot styling.
+
+        Args:
+            color_scheme: The new color scheme from Qt (Qt.ColorScheme enum).
+        """
+        is_dark = color_scheme == Qt.ColorScheme.Dark  # type: ignore[comparison-overlap]
+        logger.info("OS theme changed, dark mode: %s", is_dark)
+
+        # Update plot styling
+        self._configure_plot_style(is_dark)
+
+        # Update plot line and marker colors
+        line_color, marker_color = self._get_plot_colors(is_dark)
+        self.plot_item.setPen(pg.mkPen(line_color, width=2))
+        self.plot_item.setSymbolBrush(marker_color)
+
+        # Refresh the plot to apply changes
+        self.plot_item.setData(self.xs, self.ys)
 
     def set_column(self, column: str) -> None:
         """Change the Y-axis column being plotted."""
