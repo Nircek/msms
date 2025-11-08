@@ -2,8 +2,11 @@
 
 import csv
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+import pandas as pd
 
 from msms.logging_config import get_logs_file_path
 
@@ -12,6 +15,21 @@ if TYPE_CHECKING:
     from io import TextIOWrapper
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class SessionSnapshot:
+    """Container storing parsed CSV session data."""
+
+    csv_path: Path
+    description_path: Path
+    columns: list[str]
+    numeric_columns: list[str]
+    numeric_rows: list[list[float]]
+    last_row: dict[str, str]
+    description: str
+    timestamp_zero: float
+    row_count: int
 
 
 class CsvPersistenceService:
@@ -49,6 +67,11 @@ class CsvPersistenceService:
         self.description_path.touch()
         self._is_active = True
         logger.info("Started CSV persistence to %s", self.csv_file_path)
+
+    def reactivate_session(self) -> None:
+        """Mark session as active without opening files (for restored sessions)."""
+        self._is_active = True
+        logger.debug("Reactivated persistence session for %s", self.csv_file_path)
 
     def stop_session(self) -> None:
         """Close CSV file and clean up empty files."""
@@ -115,6 +138,64 @@ class CsvPersistenceService:
             last_file_stem = csv_files[index - 1]
             return get_logs_file_path(self.data_suffix, last_file_stem)
         return None
+
+    def resolve_restore_target(self, candidate: Path | None) -> Path | None:
+        """Resolve the path that should be used for restoring a session.
+
+        Returns:
+            ``Path`` pointing to the session that should be restored or ``None``
+            when no historic session is available.
+        """
+
+        if candidate is not None:
+            return candidate
+        return self.get_last_used_file()
+
+    def load_snapshot(self, csv_path: Path) -> SessionSnapshot:
+        """Parse CSV data and description for a stored session.
+
+        Returns:
+            ``SessionSnapshot`` containing parsed CSV data alongside metadata.
+
+        Raises:
+            FileNotFoundError: When either CSV or description file is missing.
+        """
+
+        if not csv_path.exists():
+            raise FileNotFoundError(csv_path)
+
+        description_path = get_logs_file_path(self.description_suffix, csv_path.stem)
+        if not description_path.exists():
+            raise FileNotFoundError(description_path)
+
+        dataframe = pd.read_csv(csv_path, comment="#")
+        columns = list(dataframe.columns)
+        last_row = dataframe.iloc[-1].astype("string").to_dict() if not dataframe.empty else {}
+        timestamp_value = 0.0
+        if not dataframe.empty and "timestamp" in dataframe.columns:
+            first_row_value = dataframe.iloc[0]["timestamp"]
+            if pd.notna(first_row_value):
+                timestamp_value = float(first_row_value)
+        row_count = len(dataframe)
+
+        numeric_frame = dataframe.apply(pd.to_numeric, errors="coerce").astype("float64", copy=False)
+        numeric_frame = numeric_frame.loc[:, numeric_frame.notna().any()]
+        numeric_columns = list(numeric_frame.columns)
+        numeric_rows = numeric_frame.to_numpy(dtype=float, copy=True).tolist()
+
+        description_text = description_path.read_text(encoding="utf-8")
+
+        return SessionSnapshot(
+            csv_path=csv_path,
+            description_path=description_path,
+            columns=columns,
+            numeric_columns=numeric_columns,
+            numeric_rows=numeric_rows,
+            last_row=last_row,
+            description=description_text,
+            timestamp_zero=timestamp_value,
+            row_count=row_count,
+        )
 
     def export_to_csv(self, export_path: Path, columns: list[str] | None = None) -> None:
         """Export current CSV data to a user-provided path."""

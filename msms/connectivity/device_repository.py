@@ -44,7 +44,7 @@ class DeviceRepository:
         try:
             self._resource_manager = pyvisa.ResourceManager(self._visa_library)
             resources = self._resource_manager.list_resources()
-            logger.info("Available VISA resources: %s", repr(resources))
+            logger.info("Available VISA resources: %r", resources)
             if not resources:
                 logger.warning("No VISA resources found")
         except Exception:
@@ -67,7 +67,7 @@ class DeviceRepository:
         logger.debug("Discovered VISA resources: %s", resources)
 
         registered_devices = [device.short_display_name for device in device_registry]
-        logger.info("Registered device types: %s", repr(registered_devices))
+        logger.info("Registered device types: %r", registered_devices)
 
         discovered: list[DiscoveredDevice] = []
 
@@ -152,15 +152,15 @@ class DeviceRepository:
             device_instance = None if device_class is None else device_class(resource)
 
             if device_instance is None:
-                logger.warning("Unknown device (%s, %s)", resource_name, repr(idn))
+                logger.warning("Unknown device (%s, %r)", resource_name, idn)
                 resource.close()
                 continue
 
             logger.info(
-                "Created device instance: %s (%s, %s)",
+                "Created device instance: %s (%s, %r)",
                 device_instance.short_display_name,
                 resource_name,
-                repr(idn),
+                idn,
             )
             self._devices.append(device_instance)
 

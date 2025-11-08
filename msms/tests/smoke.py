@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 import os
 import tempfile
@@ -59,11 +57,26 @@ def main() -> int:
         window.show()
         app.processEvents()
 
-        devices = window.app_controller.discover_devices()
-        if not devices:
+        discovered_devices: list = []
+
+        def capture_devices(devices: object) -> None:
+            if isinstance(devices, list):
+                discovered_devices.clear()
+                discovered_devices.extend(devices)
+
+        window.app_controller.device_manager.devices_discovered.connect(capture_devices)
+
+        # Start device discovery and wait for devices to be discovered
+        window.app_controller.start_discovery(interval_ms=500)
+        _process_events(app, 2.0)  # Allow time for device discovery to complete
+
+        # Stop discovery once we have devices
+        window.app_controller.stop_discovery()
+
+        if not discovered_devices:
             raise SmokeTestError(_NO_DEVICES_REASON)
 
-        addresses = [device.address for device in devices]
+        addresses = [device.address for device in discovered_devices]
         window.app_controller.update_selected_devices(addresses)
         window.app_controller.start_acquisition()
 
@@ -74,7 +87,8 @@ def main() -> int:
 
         export_dir = Path(tempfile.mkdtemp(prefix="msms_smoke_"))
         export_path = export_dir / "acquisition.csv"
-        window.app_controller.storage_manager.export_to_csv(export_path)
+        window.app_controller.request_export_to_csv(export_path)
+        _process_events(app, 0.5)  # Allow time for export signal to complete
 
         if not export_path.exists():
             raise SmokeTestError(_EXPORT_MISSING_REASON)

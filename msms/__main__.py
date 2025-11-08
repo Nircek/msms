@@ -65,6 +65,7 @@ def ui() -> None:
     exit_code = app.exec()
     if win.isVisible():
         win.close()
+    timer.stop()
     sys.exit(exit_code)
 
 

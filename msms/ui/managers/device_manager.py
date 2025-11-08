@@ -12,8 +12,10 @@ class DeviceManager(QtCore.QObject):
 
     data_initialized = QtCore.pyqtSignal(object)
     data_collected = QtCore.pyqtSignal(object)
+    devices_discovered = QtCore.pyqtSignal(object)
+    acquisition_state_changed = QtCore.pyqtSignal(object)
 
-    def __init__(self, device_repository: DeviceRepository | None = None, interval_ms: int = 500) -> None:
+    def __init__(self, interval_ms: int = 500) -> None:
         """Initialize the manager with a QTimer-based polling mechanism.
 
         Args:
@@ -23,27 +25,16 @@ class DeviceManager(QtCore.QObject):
         self._is_running = False
         self._timer: QtCore.QTimer | None = None
         self._interval_ms = interval_ms
-        self._repository = device_repository or DeviceRepository()
-        self._selected_addresses: tuple[str, ...] = ()
-        self._visa_ready = False
-
-    @property
-    def is_running(self) -> bool:
-        """Report whether the polling loop is currently active."""
-        return self._is_running
+        self._repository = DeviceRepository()
+        self._selected_addresses: list[str] = []
+        self._discovery_timer: QtCore.QTimer | None = None
 
     @property
     def interval_ms(self) -> int:
-        """Get current polling interval in milliseconds."""
         return self._interval_ms
 
     @interval_ms.setter
     def interval_ms(self, value: int) -> None:
-        """Set polling interval in milliseconds and update timer if running.
-
-        Args:
-            value: New interval in milliseconds.
-        """
         self._interval_ms = value
         if self._is_running and self._timer is not None:
             self._timer.setInterval(value)
@@ -51,24 +42,22 @@ class DeviceManager(QtCore.QObject):
 
     def initialize_visa(self) -> None:
         """Initialise VISA resources once."""
-
-        if self._visa_ready:
-            return
-
         self._repository.initialize_visa()
-        self._visa_ready = True
 
     def discover_devices(self) -> list[DiscoveredDevice]:
         """Return the current set of discoverable devices.
 
         Returns:
-            A list of discovered device summaries sourced from the VISA bus.
+            List of devices detected via the VISA repository.
         """
-
-        self.initialize_visa()
         return self._repository.discover_devices()
 
-    def start_acquisition(self) -> None:
+    @QtCore.pyqtSlot()
+    def on_setup(self) -> None:
+        self.initialize_visa()
+
+    @QtCore.pyqtSlot()
+    def on_acquisition_start_request(self) -> None:
         """Initialize devices and start timer-based polling."""
         if self._is_running:
             logger.warning("Acquisition already running, ignoring start request.")
@@ -84,12 +73,14 @@ class DeviceManager(QtCore.QObject):
             logger.exception("Unable to initialise VISA before acquisition")
             return
 
-        # Create timer in the correct thread (after moveToThread)
         if self._timer is None:
+            current_thread = QtCore.QThread.currentThread()
+            thread_id = int(current_thread.currentThreadId()) if current_thread else 0  # type: ignore[arg-type]
+            logger.info("Creating timer on thread %s (id: %s)", current_thread, thread_id)
             self._timer = QtCore.QTimer(self)
             self._timer.timeout.connect(self._poll_devices)
 
-        self._repository.set_selected_addresses(list(self._selected_addresses))
+        self._repository.set_selected_addresses(self._selected_addresses)
 
         try:
             self._repository.prepare_devices()
@@ -110,6 +101,7 @@ class DeviceManager(QtCore.QObject):
         self._is_running = True
         self._timer.setInterval(self._interval_ms)
         self._timer.start()
+        self.acquisition_state_changed.emit(True)
 
     def _poll_devices(self) -> None:
         """Collect data from devices (called by timer)."""
@@ -120,31 +112,81 @@ class DeviceManager(QtCore.QObject):
         data = self._repository.collect_data()
         self.data_collected.emit(data)
 
-    def stop_acquisition(self) -> None:
+    @QtCore.pyqtSlot()
+    def on_acquisition_stop_request(self) -> None:
         """Stop polling and clean up device resources."""
-        if self._timer is not None and self._timer.isActive():
+
+        if not self._is_running:
+            logger.info("Acquisition not running, nothing to stop")
+            return
+
+        self._is_running = False
+        if self._timer is not None:
             self._timer.stop()
 
-        self._repository.shutdown_devices()
-        if self._visa_ready:
-            self._repository.close()
-            self._visa_ready = False
+        self._repository.close()
 
-        if self._is_running:
-            logger.info("Device acquisition stopped")
-        self._is_running = False
+        self.acquisition_state_changed.emit(False)
+        logger.info("Device acquisition stopped")
 
-    @QtCore.pyqtSlot(list)
-    def set_selected_addresses(self, addresses: list[str]) -> None:
+    @QtCore.pyqtSlot(object)
+    def on_device_select_request(self, addresses: list[str]) -> None:
         """Configure which device addresses should be polled."""
 
-        self._selected_addresses = tuple(addresses)
-        self._repository.set_selected_addresses(list(addresses))
+        self._selected_addresses = addresses
+        self._repository.set_selected_addresses(addresses)
         logger.info("Selected device addresses updated: %s", addresses)
         if self._is_running:
             logger.warning("Updated device selection will apply on the next restart.")
 
-    def shutdown(self) -> None:
+    @QtCore.pyqtSlot(object)
+    def on_interval_change_request(self, interval_ms: int) -> None:
+        """Update polling interval from a queued signal."""
+
+        self.interval_ms = interval_ms
+
+    @QtCore.pyqtSlot(object)
+    def on_discovery_start_request(self, interval_ms: int) -> None:
+        if self._discovery_timer is not None and self._discovery_timer.isActive():
+            logger.warning("Discovery already running, ignoring start request.")
+            return
+
+        try:
+            self.initialize_visa()
+        except Exception:
+            logger.exception("Unable to initialize VISA before discovery")
+            return
+
+        if self._discovery_timer is None:
+            self._discovery_timer = QtCore.QTimer(self)
+            self._discovery_timer.timeout.connect(self._poll_discovered_devices)
+
+        self._discovery_timer.setInterval(interval_ms)
+        self._discovery_timer.start()
+        logger.info("Device discovery started with interval %d ms", interval_ms)
+        self._poll_discovered_devices()
+
+    def _poll_discovered_devices(self) -> None:
+        """Scan for devices and emit results (called by discovery timer)."""
+        if not self._discovery_timer or not self._discovery_timer.isActive():
+            return
+
+        try:
+            devices = self.discover_devices()
+        except Exception:
+            logger.exception("Device discovery failed")
+            devices = []
+        self.devices_discovered.emit(devices)
+
+    @QtCore.pyqtSlot()
+    def on_discovery_stop_request(self) -> None:
+        """Stop periodic device discovery polling."""
+        if self._discovery_timer is not None:
+            self._discovery_timer.stop()
+
+    @QtCore.pyqtSlot()
+    def on_shutdown(self) -> None:
         """Release all VISA resources."""
 
-        self.stop_acquisition()
+        self.on_discovery_stop_request()
+        self.on_acquisition_stop_request()

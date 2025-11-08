@@ -15,6 +15,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def clamp_to_float_precision(value: float) -> float:
+    return max(-1e308, min(1e308, value))
+
+
 class PlotController(QtCore.QObject):
     """Manage plot widget state, auto-follow, and user interaction."""
 
@@ -99,14 +103,14 @@ class PlotController(QtCore.QObject):
         if self._programmatic_update:
             return
         self.auto_follow_checkbox.setChecked(False)
-        self._last_user_xrange = range_
+        self._last_user_xrange = [clamp_to_float_precision(range_[0]), clamp_to_float_precision(range_[1])]
 
     def _on_y_range_changed(self, _view_box: ViewBox, range_: list[float]) -> None:
         """Track manual Y range changes to disable auto-follow."""
         if self._programmatic_update:
             return
         self.auto_follow_checkbox.setChecked(False)
-        self._last_user_yrange = range_
+        self._last_user_yrange = [clamp_to_float_precision(range_[0]), clamp_to_float_precision(range_[1])]
 
     def _on_auto_follow_toggled(self, checked: bool) -> None:
         """Enable or disable automatic chart panning."""

@@ -43,7 +43,7 @@ def find_device_for_idn(idn: str | None) -> type[DeviceBase] | None:
 
     can_be_handled_by = [device_class for device_class in device_registry if device_class.can_handle(idn_parts)]
     if len(can_be_handled_by) > 1:
-        logger.warning("Multiple device classes can handle IDN %r: %s", idn, repr(can_be_handled_by))
+        logger.warning("Multiple device classes can handle IDN %r: %r", idn, can_be_handled_by)
 
     if can_be_handled_by:
         return can_be_handled_by[0]

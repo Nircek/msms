@@ -1,7 +1,3 @@
-"""Dialog for selecting devices to poll."""
-
-from __future__ import annotations
-
 import logging
 import typing
 
@@ -9,6 +5,7 @@ from PyQt6 import QtCore, QtWidgets
 
 if typing.TYPE_CHECKING:
     from msms.connectivity.device_repository import DiscoveredDevice
+    from msms.ui.controllers.app_controller import ApplicationController
 
 logger = logging.getLogger(__name__)
 
@@ -16,34 +13,22 @@ logger = logging.getLogger(__name__)
 class DeviceSelectionDialog(QtWidgets.QDialog):
     """Dialog for discovering and selecting devices to poll."""
 
-    def __init__(
-        self,
-        parent: QtWidgets.QWidget | None = None,
-        discover_devices: typing.Callable[[], list[DiscoveredDevice]] | None = None,
-    ) -> None:
-        """Initialize the device selection dialog.
-
-        Args:
-            parent: Parent widget.
-            discover_devices: Callable returning the latest discovery snapshot.
-        """
+    def __init__(self, parent: QtWidgets.QWidget, app_controller: ApplicationController) -> None:
         super().__init__(parent)
         self.setWindowTitle("Select Devices")
         self.setMinimumWidth(800)
         self.setMinimumHeight(400)
 
         self.discovered_devices: list[DiscoveredDevice] = []
-        self._discover_devices = discover_devices or list
+        self._app_controller = app_controller
         self._selected_addresses: set[str] = set()
         self._updating_selection = False
 
         self._setup_ui()
 
-        self._polling_timer = QtCore.QTimer()
-        self._polling_timer.timeout.connect(self._poll_devices)
-        self._polling_timer.start(2000)
-
-        self._poll_devices()
+        self._app_controller.device_manager.devices_discovered.connect(self._on_devices_discovered)
+        self._app_controller.start_discovery(interval_ms=2000)
+        self.finished.connect(lambda *_: self._app_controller.stop_discovery())
 
     def _setup_ui(self) -> None:
         layout = QtWidgets.QVBoxLayout(self)
@@ -69,14 +54,9 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    def _poll_devices(self) -> None:
-        try:
-            self.discovered_devices = self._discover_devices()
-        except Exception:
-            logger.exception("Error during device polling")
-            self.status_label.setText("Error scanning for devices")
-            return
-
+    @QtCore.pyqtSlot(object)
+    def _on_devices_discovered(self, devices: list[DiscoveredDevice]) -> None:
+        self.discovered_devices = devices
         self._update_device_table()
         self.status_label.setText(f"Found {len(self.discovered_devices)} device(s)")
 
@@ -127,6 +107,6 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
         self._selected_addresses = selected_addresses
 
     def closeEvent(self, event: QtCore.QEvent | None) -> None:  # noqa: N802
-        self._polling_timer.stop()
+        self.finished.emit(0)
         if event:
             event.accept()

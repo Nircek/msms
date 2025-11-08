@@ -7,7 +7,7 @@ from PyQt6 import QtGui, QtWidgets, uic
 
 from msms.ui.controllers.app_controller import ApplicationController
 from msms.ui.controllers.plot_controller import PlotController
-from msms.ui.dialogs import DeviceSelectionDialog
+from msms.ui.dialogs import DescriptionDialog, DeviceSelectionDialog, MarkdownViewerDialog
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,11 @@ class MainWindowUic(QtWidgets.QMainWindow):
         self.fix_slot_signal("doActionPushButton", "clicked")
         self.fix_slot_signal("actionRestoreLastFile", "triggered")
         self.fix_slot_signal("actionSelectDevices", "triggered")
+        self.fix_slot_signal("actionManageExperiment", "triggered")
+        self.fix_slot_signal("actionDescribe", "triggered")
+        self.fix_slot_signal("actionExport", "triggered")
+        self.fix_slot_signal("actionHelp", "triggered")
+        self.fix_slot_signal("actionAbout", "triggered")
         self.autoFollowCheckBox: QtWidgets.QCheckBox
         self.chartConfigPushButton: QtWidgets.QPushButton
         self.doActionPushButton: QtWidgets.QPushButton
@@ -38,6 +43,7 @@ class MainWindowUic(QtWidgets.QMainWindow):
         self.commentPlainTextEdit: QtWidgets.QPlainTextEdit
         self.variablesTextEdit: QtWidgets.QTextEdit
         self.actionSelectDevices: QtGui.QAction
+        self.actionManageExperiment: QtGui.QAction
         self.actionDescribe: QtGui.QAction
         self.actionExport: QtGui.QAction
         self.actionRestoreLastFile: QtGui.QAction
@@ -80,9 +86,14 @@ class MainWindow(MainWindowUic):
         self.app_controller = ApplicationController(interval_ms=500)
         self._selected_device_addresses: list[str] = []
 
-        self.app_controller.storage_manager.new_data_row.connect(self.on_update_data_labels)
-        self.app_controller.storage_manager.new_data_row.connect(lambda _data: self.refresh_plot())
-        self.app_controller.storage_manager.columns_changed.connect(self.on_columns_change)
+        storage_manager = self.app_controller.storage_manager
+        storage_manager.new_data_row.connect(self.on_update_data_labels)
+        storage_manager.new_data_row.connect(lambda _data: self.refresh_plot())
+        storage_manager.columns_changed.connect(self.on_columns_change)
+        storage_manager.description_changed.connect(self._on_description_changed)
+        storage_manager.restore_failed.connect(self._on_restore_failed)
+        storage_manager.export_completed.connect(self._on_export_completed)
+        storage_manager.export_failed.connect(self._on_export_failed)
 
         pg.setConfigOptions(antialias=True)
         self.plot_controller = PlotController(self.plotWidget, self.autoFollowCheckBox)
@@ -95,12 +106,9 @@ class MainWindow(MainWindowUic):
         logger.info("Restoring last used file...")
         last_file = self.app_controller.storage_manager.get_last_used_file()
         if last_file is not None and last_file.exists():
-            logger.info("Restoring last used file: %s", last_file)
-            self.app_controller.storage_manager.load_old_file(last_file)
-            comment = self.app_controller.storage_manager.csv_persistence.description
-            self.commentPlainTextEdit.setPlainText(comment)
+            self.app_controller.request_restore_session(last_file)
         else:
-            logger.info("No last used file to restore.")
+            self.app_controller.request_restore_session()
 
     def on_actionSelectDevices_triggered(self) -> None:
         """Show dialog for selecting devices to poll."""
@@ -109,10 +117,7 @@ class MainWindow(MainWindowUic):
             logger.error("Device selection dialog was already open.")
             return
 
-        dialog = DeviceSelectionDialog(
-            self,
-            discover_devices=self.app_controller.discover_devices,
-        )
+        dialog = DeviceSelectionDialog(self, app_controller=self.app_controller)
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             selected_addresses = dialog.get_selected_addresses()
             logger.info("Selected devices: %s", selected_addresses)
@@ -120,6 +125,48 @@ class MainWindow(MainWindowUic):
             self.app_controller.update_selected_devices(selected_addresses)
         else:
             logger.info("Device selection cancelled")
+
+    def on_actionManageExperiment_triggered(self) -> None:
+        """Show dialog for managing the experiment plan."""
+        logger.info("Opening experiment management dialog...")
+        QtWidgets.QMessageBox.information(
+            self,
+            "Manage Experiment",
+            "Experiment management functionality is not yet implemented.",
+        )
+
+    def on_actionDescribe_triggered(self) -> None:
+        """Show dialog for editing the experiment description."""
+        logger.info("Opening description dialog...")
+        current_description = self.commentPlainTextEdit.toPlainText()
+        dialog = DescriptionDialog(self, current_description)
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            description = dialog.get_description()
+            self.commentPlainTextEdit.setPlainText(description)
+            self.app_controller.update_description(description)
+            logger.info("Description updated")
+
+    def on_actionExport_triggered(self) -> None:
+        """Export current data to CSV file."""
+        self._export_data_to_csv()
+
+    def on_actionHelp_triggered(self) -> None:
+        """Show help dialog with README content."""
+        logger.info("Opening help dialog...")
+        readme_path = Path(__file__).parent.parent.parent / "README.md"
+        dialog = MarkdownViewerDialog.from_file(self, readme_path, "MSMS - Help")
+        dialog.exec()
+
+    def on_actionAbout_triggered(self) -> None:
+        """Show about dialog."""
+        logger.info("Opening about dialog...")
+        about_text = """
+        <h2>MSMS</h2>
+        <p>Measurement System Management Software</p>
+        <p>Version 1.0</p>
+        <p>A PyQt6-based application for managing laboratory measurement devices.</p>
+        """
+        QtWidgets.QMessageBox.about(self, "About MSMS", about_text)
 
     def on_chartConfigPushButton_clicked(self) -> None:
         """Display column selection menu for the main chart."""
@@ -201,7 +248,7 @@ class MainWindow(MainWindowUic):
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             export_path = Path(dialog.selectedFiles()[0])
             logger.info("Exporting data to CSV file: %s", export_path)
-            self.app_controller.storage_manager.export_to_csv(export_path)
+            self.app_controller.request_export_to_csv(export_path)
 
     def _set_interval(self, value_ms: int) -> None:
         """Update device polling interval both in UI state and manager."""
@@ -249,11 +296,35 @@ class MainWindow(MainWindowUic):
         """Persist experiment comments as they change."""
 
         comment = self.commentPlainTextEdit.toPlainText()
-        self.app_controller.storage_manager.set_description(comment)
+        self.app_controller.update_description(comment)
+
+    def _on_description_changed(self, description: object) -> None:
+        if not isinstance(description, str):
+            return
+        previously_blocked = self.commentPlainTextEdit.blockSignals(True)
+        self.commentPlainTextEdit.setPlainText(description)
+        self.commentPlainTextEdit.blockSignals(previously_blocked)
+
+    def _on_restore_failed(self, message: object) -> None:
+        if isinstance(message, str):
+            QtWidgets.QMessageBox.information(self, "Restore Session", message)
+
+    def _on_export_completed(self, path: object) -> None:
+        if isinstance(path, str):
+            QtWidgets.QMessageBox.information(self, "Export Completed", f"Data exported to {path}")
+
+    def _on_export_failed(self, message: object) -> None:
+        if isinstance(message, str):
+            QtWidgets.QMessageBox.warning(self, "Export Failed", message)
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Ensure worker threads are stopped before window closes."""
+        app = QtWidgets.QApplication.instance()
+        current_thread = app.thread() if app else None
+        thread_id = int(current_thread.currentThreadId()) if current_thread else 0  # type: ignore[arg-type]
+        logger.info("closeEvent called from thread %s (id: %s)", current_thread, thread_id)
 
         self.app_controller.shutdown()
+        logger.info("Shutdown complete, accepting close event")
         if event:
             event.accept()

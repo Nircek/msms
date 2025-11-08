@@ -1,9 +1,11 @@
 # Software for Magnetic Susceptibility Measurement Station Using the AC Method
 
-**Author:** Marcin Zepp
-**Polish title:** Oprogramowanie stanowiska pomiarowego podatności magnetycznej metodą zmiennoprądową
-**Supervisor:** [dr hab. inż. Wojciech Tabiś](https://orcid.org/0000-0002-8827-9944)
-**Affiliation:** [Superconducting and Magnetic Materials Group](https://galaxy.agh.edu.pl/~smm/), [Department of Solid State Physics](https://website.fis.agh.edu.pl/kfcs/), [Faculty of Physics and Applied Computer Science](https://www.fis.agh.edu.pl/), [AGH University of Krakow](https://www.agh.edu.pl/)
+- **Author:** Marcin Zepp
+- **Polish title:** Oprogramowanie stanowiska pomiarowego podatności magnetycznej metodą zmiennoprądową
+- **Supervisor:** [dr hab. inż. Wojciech Tabiś, prof. AGH](https://orcid.org/0000-0002-8827-9944)
+- **Affiliation:** [Superconducting and Magnetic Materials Group](https://galaxy.agh.edu.pl/~smm/), [Department of Solid State Physics](https://website.fis.agh.edu.pl/kfcs/), [Faculty of Physics and Applied Computer Science](https://www.fis.agh.edu.pl/), [AGH University of Krakow](https://www.agh.edu.pl/)
+- **Field of study**: [Applied Computer Science](https://www.fis.agh.edu.pl/en/candidates/applied-computer-science)
+- **Year**: 2026
 
 ## Project Description
 

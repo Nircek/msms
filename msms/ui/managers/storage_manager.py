@@ -1,19 +1,18 @@
 """Coordinate data transformation and persistence for acquisition system."""
 
 import logging
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
-import pandas as pd
 from PyQt6 import QtCore
 
-from msms.ui.managers import CsvPersistenceService
+from msms.ui.managers.csv_persistence_service import CsvPersistenceService, SessionSnapshot
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
-    from pathlib import Path
 
-from msms.logging_config import get_logs_file_path
+EXPORT_PAYLOAD_SIZE = 2
 
 logger = logging.getLogger(__name__)
 
@@ -91,17 +90,18 @@ class DataRepository:
         self._columns = columns
         self._grow(capacity)
 
-    def from_dataframe(self, df: pd.DataFrame) -> None:
-        """Populate storage from an existing dataframe snapshot.
-
-        Args:
-            df: Dataframe containing historical numeric samples.
-        """
+    def load_snapshot(self, columns: list[str], rows: list[list[float]]) -> None:
+        """Populate storage from a historical snapshot."""
 
         assert self._columns is None, "DataRepository is already initialized"
-        self._columns = list(df.columns)
-        data = df.to_numpy(dtype=float)
+        row_count = len(rows)
+        column_count = len(columns)
+        if row_count == 0 or column_count == 0:
+            data = np.zeros((0, column_count), dtype=float)
+        else:
+            data = np.asarray(rows, dtype=float).reshape(row_count, column_count)
         self._mutex.lock()
+        self._columns = list(columns)
         self._data = data
         self.size = data.shape[0]
         self.capacity = data.shape[0]
@@ -143,6 +143,10 @@ class StorageManager(QtCore.QObject):
 
     new_data_row = QtCore.pyqtSignal(object)
     columns_changed = QtCore.pyqtSignal(object)
+    description_changed = QtCore.pyqtSignal(object)
+    restore_failed = QtCore.pyqtSignal(object)
+    export_completed = QtCore.pyqtSignal(object)
+    export_failed = QtCore.pyqtSignal(object)
 
     def __init__(self) -> None:
         super().__init__()
@@ -154,12 +158,24 @@ class StorageManager(QtCore.QObject):
         self.columns: list[str] = []
         self.number_columns: list[str] = []
 
-    def setup(self) -> None:
+    @QtCore.pyqtSlot()
+    def on_session_start_request(self) -> None:
         """Start a new acquisition session."""
+        if self.csv_persistence.is_active:
+            logger.warning("Persistence session already active")
+            return
+
+        self.csv_persistence = CsvPersistenceService()
+        self.data_repository = DataRepository()
+        self.columns = []
+        self.number_columns = []
+        self.row_number = 1
+        self.t0 = 0.0
         self._is_running = True
         self.csv_persistence.start_session()
 
-    def stop(self) -> None:
+    @QtCore.pyqtSlot()
+    def on_stop_request(self) -> None:
         """Stop recording and close resources."""
         self._is_running = False
         self.csv_persistence.stop_session()
@@ -172,45 +188,62 @@ class StorageManager(QtCore.QObject):
         """
         return self.csv_persistence.get_last_used_file()
 
-    def load_old_file(self, file_path: Path) -> None:
-        """Load previously recorded data and emit refresh signals for the UI."""
-        file_stem = file_path.stem
-        csv_file_path = get_logs_file_path(self.csv_persistence.data_suffix, file_stem)
-        description_path = get_logs_file_path(self.csv_persistence.description_suffix, file_stem)
-        assert file_path.exists(), f"Data file {file_path} does not exist"
-        assert description_path.exists(), f"Description file {description_path} does not exist"
+    @QtCore.pyqtSlot(object)
+    def on_session_restore_request(self, target: object) -> None:
+        """Restore a previously recorded session and notify the UI."""
 
-        self.stop()
-        self.csv_persistence.csv_file_path = csv_file_path
-        self._is_running = True
+        path = self._coerce_optional_path(target)
+        resolved = self.csv_persistence.resolve_restore_target(path)
+        if resolved is None:
+            message = "No previous session available to restore."
+            logger.info(message)
+            self.restore_failed.emit(message)
+            return
 
-        df = pd.read_csv(file_path, comment="#")
-        self.columns = list(df.columns)
-        self.row_number = len(df)
-        timestamp_val = df.loc[0, "timestamp"]
-        self.t0 = float(timestamp_val) if pd.notna(timestamp_val) else 0.0  # type: ignore[arg-type]
-        last_row = df.iloc[-1].astype("string").to_dict()
-        logger.info("Loaded %d rows from %s", self.row_number, file_path)
-        self.new_data_row.emit(self.transform_data(last_row)[0])
+        self.on_stop_request()
 
-        df = df.apply(pd.to_numeric, errors="coerce").astype("float64")
-        df = df.loc[:, df.notna().any()]
-        self.data_repository.from_dataframe(df)
-        self.number_columns = list(self.data_repository.columns or [])
+        try:
+            snapshot = self.csv_persistence.load_snapshot(resolved)
+        except FileNotFoundError as error:
+            logger.info("Requested restore target missing: %s", error)
+            self.restore_failed.emit(str(error))
+            return
+        except Exception:
+            logger.exception("Unexpected error while restoring session from %s", resolved)
+            self.restore_failed.emit(f"Failed to restore session from {resolved}")
+            return
 
-        with description_path.open("r", encoding="utf-8") as desc_file:
-            self.csv_persistence.description = desc_file.read()
-        self.columns_changed.emit(self.number_columns)
+        self._apply_snapshot(snapshot)
 
-    def export_to_csv(self, export_path: Path, columns: list[str] | None = None) -> None:
+    @QtCore.pyqtSlot(object)
+    def on_export_request(self, request: object) -> None:
         """Export currently stored data into a user-provided CSV path."""
-        self.csv_persistence.export_to_csv(export_path, columns)
 
-    def set_description(self, description: str) -> None:
+        export_path, columns = self._unpack_export_request(request)
+        if export_path is None:
+            message = "Export request missing path."
+            logger.error(message)
+            self.export_failed.emit(message)
+            return
+
+        try:
+            self.csv_persistence.export_to_csv(export_path, columns)
+        except Exception:
+            logger.exception("Failed to export data to %s", export_path)
+            self.export_failed.emit(f"Failed to export data to {export_path}")
+            return
+
+        self.export_completed.emit(str(export_path))
+
+    @QtCore.pyqtSlot(object)
+    def on_description_change_request(self, description: object) -> None:
         """Persist the textual experiment description alongside the CSV file."""
-        self.csv_persistence.set_description(description)
 
-    def set_header(self, initial_data: Mapping[str, str]) -> None:
+        description_text = "" if description is None else str(description)
+        self.csv_persistence.set_description(description_text)
+        # self.description_changed.emit(description_text) -- do not emit, UI already knows
+
+    def on_header_set_request(self, initial_data: Mapping[str, str]) -> None:
         """Configure CSV header and emit column information for the UI."""
         if not self.csv_persistence.is_active:
             logger.error("Cannot set header: persistence not active")
@@ -223,8 +256,9 @@ class StorageManager(QtCore.QObject):
         self.data_repository.initialize(self.number_columns)
         self.csv_persistence.write_header(self.columns)
         self.columns_changed.emit(self.number_columns)
+        self._is_running = True
 
-    def on_data_append(self, data: dict[str, str]) -> None:
+    def on_data_append_request(self, data: dict[str, str]) -> None:
         """Handle new acquisition payload and update caches and CSV."""
         if not self._is_running:
             return
@@ -234,6 +268,62 @@ class StorageManager(QtCore.QObject):
         self.data_repository.append(number_row)
         self.csv_persistence.write_row(row)
         self.row_number += 1
+
+    def _apply_snapshot(self, snapshot: SessionSnapshot) -> None:
+        """Replace in-memory state with the supplied snapshot."""
+
+        logger.info("Restoring session from %s", snapshot.csv_path)
+        self._is_running = False
+        self.csv_persistence.csv_file_path = snapshot.csv_path
+        self.csv_persistence.description = snapshot.description
+        self.csv_persistence.reactivate_session()  # Allow description updates for restored session
+        self.columns = list(snapshot.columns)
+        self.number_columns = list(snapshot.numeric_columns)
+
+        self.data_repository = DataRepository()
+        self.data_repository.load_snapshot(snapshot.numeric_columns, snapshot.numeric_rows)
+
+        last_row_index = snapshot.row_count
+        self.row_number = last_row_index if last_row_index > 0 else 1
+        self.t0 = snapshot.timestamp_zero
+
+        if snapshot.last_row:
+            parsed, _, _ = self.transform_data(snapshot.last_row)
+            self.new_data_row.emit(parsed)
+        self.row_number = last_row_index + 1 if last_row_index > 0 else 1
+
+        self.columns_changed.emit(self.number_columns)
+        self.description_changed.emit(snapshot.description)
+
+    @staticmethod
+    def _coerce_optional_path(target: object) -> Path | None:
+        if target in {None, ""}:
+            return None
+        if isinstance(target, Path):
+            return target
+        try:
+            return Path(str(target))
+        except Exception:
+            logger.exception("Unable to interpret restore target %r", target)
+            return None
+
+    def _unpack_export_request(self, request: object) -> tuple[Path | None, list[str] | None]:
+        if isinstance(request, tuple) and len(request) == EXPORT_PAYLOAD_SIZE:
+            target, columns = request
+            return self._coerce_optional_path(target), self._coerce_columns(columns)
+        if isinstance(request, dict):
+            target = request.get("path")
+            columns = request.get("columns")
+            return self._coerce_optional_path(target), self._coerce_columns(columns)
+        return self._coerce_optional_path(request), None
+
+    @staticmethod
+    def _coerce_columns(columns: object) -> list[str] | None:
+        if columns is None:
+            return None
+        if isinstance(columns, (list, tuple)):
+            return [str(col) for col in columns]
+        return [str(columns)]
 
     def transform_data(self, data: Mapping[str, str]) -> tuple[dict[str, str | float], list[str | float], list[float]]:
         """Convert a string payload into miscellaneous and numeric representations.
