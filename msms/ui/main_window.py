@@ -1,11 +1,11 @@
 import logging
-from datetime import timedelta
 from pathlib import Path
 
 import pyqtgraph as pg  # type: ignore
 from PyQt6 import QtGui, QtWidgets, uic
 
 from msms.ui.controllers.app_controller import ApplicationController
+from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
 from msms.ui.controllers.plot_controller import PlotController
 from msms.ui.dialogs import DescriptionDialog, DeviceSelectionDialog, MarkdownViewerDialog
 
@@ -79,7 +79,6 @@ class MainWindow(MainWindowUic):
     def __init__(self) -> None:
         super().__init__()
 
-        self.on_update_data_labels({})  # initialize labels
         self.chart_columns = ["time", "number", "dt"]
         self.current_chart_column = "timestamp"
 
@@ -97,6 +96,18 @@ class MainWindow(MainWindowUic):
 
         pg.setConfigOptions(antialias=True)
         self.plot_controller = PlotController(self.plotWidget, self.autoFollowCheckBox)
+        self.display_controller = DisplayController(
+            DisplayWidgets(
+                time_label=self.timeValue,
+                number_label=self.numberValue,
+                sample_label=self.sampleValue,
+                control_label=self.controlValue,
+                set_point_label=self.setPointValue,
+                ramp_label=self.rampValue,
+                variables_text=self.variablesTextEdit,
+                status_layout=self.experimentStatusLayoutWidget,
+            )
+        )
 
     def refresh_plot(self) -> None:
         self.plot_controller.refresh_from_repository(self.app_controller.storage_manager.data_repository)
@@ -267,30 +278,7 @@ class MainWindow(MainWindowUic):
 
     def on_update_data_labels(self, data: dict[str, float | str]) -> None:
         """Update UI labels and all relevant views with the latest data payload."""
-
-        time = str(timedelta(seconds=int(data.get("time", 0))))
-        no = f"#{data.get('row_number', 0):.0f}"
-        self.timeValue.setText(time)
-        self.numberValue.setText(no)
-
-        sample, control = data.get("sample", "N/A"), data.get("control", "N/A")
-        sample = f"{sample:.2f}K" if isinstance(sample, float) else str(sample).strip()
-        control = f"{control:.2f}K" if isinstance(control, float) else str(control).strip()
-        self.sampleValue.setText(sample)
-        self.controlValue.setText(control)
-        set_point, set_point_unit = data.get("set_point", "N/A"), data.get("set_point_unit", "")
-        set_point = f"{set_point:.2f} {set_point_unit}" if isinstance(set_point, float) else str(set_point).strip()
-        self.setPointValue.setText(set_point)
-        ramp_rate = data.get("ramp_rate") or "-"
-        ramp_rate = f"{ramp_rate:.1f}K/s" if isinstance(ramp_rate, float) else str(ramp_rate).strip()
-        self.rampValue.setText(ramp_rate)
-
-        # if the layout is too narrow to show all labels properly, expand it
-        self.experimentStatusLayoutWidget.setMinimumWidth(
-            max(self.experimentStatusLayoutWidget.minimumWidth(), self.experimentStatusLayoutWidget.sizeHint().width())
-        )
-
-        self.variablesTextEdit.setPlainText("\n\n".join(f"{k}:\n{v!r}" for k, v in data.items()))
+        self.display_controller.update_labels(data)
 
     def on_commentPlainTextEdit_textChanged(self) -> None:
         """Persist experiment comments as they change."""
