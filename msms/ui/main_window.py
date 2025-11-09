@@ -255,13 +255,13 @@ class MainWindow(MainWindowUic):
             "hr { height: 1px; border-width: 0; }"
             'li.unchecked::marker { content: "\\2610"; }'
             'li.checked::marker { content: "\\2612"; }'
-            '</style></head><body style=" font-family:\'.AppleSystemUIFont\'; font-size:13pt; '
+            "</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; "
             'font-weight:400; font-style:normal;">'
             '<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; '
             f'-qt-block-indent:0; text-indent:0px;"><span style=" font-weight:700;">CURRENT: </span>{current_text}</p>'
             '<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; '
             f'-qt-block-indent:0; text-indent:0px;"><span style=" font-weight:700;">NEXT: '
-            f'</span>{next_text}</p>'
+            f"</span>{next_text}</p>"
             "</body></html>"
         )
 
@@ -275,7 +275,7 @@ class MainWindow(MainWindowUic):
             '<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" />'
             '<style type="text/css">p, li { white-space: pre-wrap; }hr { height: 1px; border-width: 0; }'
             'li.unchecked::marker { content: "\\2610"; }li.checked::marker { content: "\\2612"; }'
-            '</style></head><body style=" font-family:\'.AppleSystemUIFont\'; font-size:13pt; '
+            "</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; "
             'font-weight:400; font-style:normal;"><p style=" margin-top:0px; margin-bottom:0px; '
             'margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'
             '<span style=" font-weight:700;">EXPERIMENT COMPLETED</span></p></body></html>'

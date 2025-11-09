@@ -244,7 +244,4 @@ class ExperimentManager(QtCore.QObject):
         Returns:
             List of tuples (step_id, label, start_timestamp) for all steps.
         """
-        return [
-            (step.step_id, step.label, step.start_timestamp)
-            for step in self._steps
-        ]
+        return [(step.step_id, step.label, step.start_timestamp) for step in self._steps]
