@@ -147,6 +147,14 @@ class MainWindow(MainWindowUic):
 
     def on_actionManageExperiment_triggered(self) -> None:
         """Show dialog for managing the experiment plan."""
+        if not self._selected_device_addresses:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "No Devices Selected",
+                "Please select devices first using File → Select Devices before managing experiments.",
+            )
+            return
+
         dialog = ExperimentDialog(self, app_controller=self.app_controller)
         dialog.exec()
 
