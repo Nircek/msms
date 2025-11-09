@@ -116,12 +116,12 @@ class MainWindow(MainWindowUic):
         )
 
     def refresh_plot(self) -> None:
-        self.plot_controller.refresh_from_repository(self.app_controller.storage_manager.data_repository)
+        """Update plot with latest data from repository."""
+        self.plot_controller.refresh_from_repository(self.app_controller.data_repository)
 
     def on_actionRestoreLastFile_triggered(self) -> None:
         """Restore the last recorded session from disk if available."""
-        logger.info("Restoring last used file...")
-        last_file = self.app_controller.storage_manager.get_last_used_file()
+        last_file = self.app_controller.get_last_used_file()
         if last_file is not None and last_file.exists():
             self.app_controller.request_restore_session(last_file)
         else:
@@ -129,9 +129,7 @@ class MainWindow(MainWindowUic):
 
     def on_actionSelectDevices_triggered(self) -> None:
         """Show dialog for selecting devices to poll."""
-        logger.info("Opening device selection dialog...")
         if self._selected_device_addresses:
-            logger.error("Device selection dialog was already open.")
             return
 
         dialog = DeviceSelectionDialog(self, app_controller=self.app_controller)
@@ -141,12 +139,9 @@ class MainWindow(MainWindowUic):
             self._selected_device_addresses = selected_addresses
             self.app_controller.update_selected_devices(selected_addresses)
             self.experiment_controller.set_selected_devices(selected_addresses)
-        else:
-            logger.info("Device selection cancelled")
 
     def on_actionManageExperiment_triggered(self) -> None:
         """Show dialog for managing the experiment plan."""
-        logger.info("Opening experiment management dialog...")
         QtWidgets.QMessageBox.information(
             self,
             "Manage Experiment",
@@ -155,14 +150,12 @@ class MainWindow(MainWindowUic):
 
     def on_actionDescribe_triggered(self) -> None:
         """Show dialog for editing the experiment description."""
-        logger.info("Opening description dialog...")
         current_description = self.commentPlainTextEdit.toPlainText()
         dialog = DescriptionDialog(self, current_description)
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             description = dialog.get_description()
             self.commentPlainTextEdit.setPlainText(description)
             self.app_controller.update_description(description)
-            logger.info("Description updated")
 
     def on_actionExport_triggered(self) -> None:
         """Export current data to CSV file."""
@@ -170,14 +163,12 @@ class MainWindow(MainWindowUic):
 
     def on_actionHelp_triggered(self) -> None:
         """Show help dialog with README content."""
-        logger.info("Opening help dialog...")
         readme_path = Path(__file__).parent.parent.parent / "README.md"
         dialog = MarkdownViewerDialog.from_file(self, readme_path, "MSMS - Help")
         dialog.exec()
 
     def on_actionAbout_triggered(self) -> None:
         """Show about dialog."""
-        logger.info("Opening about dialog...")
         about_text = """
         <h2>MSMS</h2>
         <p>Measurement System Management Software</p>
@@ -199,7 +190,6 @@ class MainWindow(MainWindowUic):
         menu.exec(QtGui.QCursor.pos())
 
     def set_chart_column(self, column: str) -> None:
-        logger.info("Chart column changed to: %s", column)
         self.current_chart_column = column
         self.chartConfigPushButton.setText(f"CHART: {column}")
         self.plot_controller.set_column(column)
@@ -211,8 +201,6 @@ class MainWindow(MainWindowUic):
 
     def on_columns_change(self, columns: list[str]) -> None:
         """Handle notification that numeric chart columns have changed."""
-
-        logger.info("Device manager initiated with columns: %s", columns)
         self.chart_columns = columns
         if self.current_chart_column not in self.chart_columns and self.chart_columns:
             self.current_chart_column = self.chart_columns[0]
@@ -228,31 +216,22 @@ class MainWindow(MainWindowUic):
         comment = self.commentPlainTextEdit.toPlainText()
         self.app_controller.update_description(comment)
 
-    def _on_description_changed(self, description: object) -> None:
-        if not isinstance(description, str):
-            return
+    def _on_description_changed(self, description: str) -> None:
         previously_blocked = self.commentPlainTextEdit.blockSignals(True)
         self.commentPlainTextEdit.setPlainText(description)
         self.commentPlainTextEdit.blockSignals(previously_blocked)
 
-    def _on_restore_failed(self, message: object) -> None:
-        if isinstance(message, str):
-            QtWidgets.QMessageBox.information(self, "Restore Session", message)
+    def _on_restore_failed(self, message: str) -> None:
+        QtWidgets.QMessageBox.information(self, "Restore Session", message)
 
-    def _on_export_completed(self, path: object) -> None:
-        if isinstance(path, str):
-            QtWidgets.QMessageBox.information(self, "Export Completed", f"Data exported to {path}")
+    def _on_export_completed(self, path: str) -> None:
+        QtWidgets.QMessageBox.information(self, "Export Completed", f"Data exported to {path}")
 
-    def _on_export_failed(self, message: object) -> None:
-        if isinstance(message, str):
-            QtWidgets.QMessageBox.warning(self, "Export Failed", message)
+    def _on_export_failed(self, message: str) -> None:
+        QtWidgets.QMessageBox.warning(self, "Export Failed", message)
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Ensure worker threads are stopped before window closes."""
-        app = QtWidgets.QApplication.instance()
-        current_thread = app.thread() if app else None
-        thread_id = int(current_thread.currentThreadId()) if current_thread else 0  # type: ignore[arg-type]
-        logger.info("closeEvent called from thread %s (id: %s)", current_thread, thread_id)
 
         self.app_controller.shutdown()
         logger.info("Shutdown complete, accepting close event")

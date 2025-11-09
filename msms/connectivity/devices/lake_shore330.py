@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
     full_display_name="LakeShore 330 Temperature Controller",
 )
 class LakeShore330(DeviceBase):
+    """LakeShore 330 temperature controller driver."""
+
     @classmethod
     def can_handle(cls, idn_parts: GpibIdnParts) -> bool:
         vendor, model, _serial, _version = idn_parts
@@ -57,6 +59,7 @@ class LakeShore330(DeviceBase):
 
     @staticmethod
     def how_many_digits_after_dot(s: str) -> int | None:
+        """Count decimal places to infer unit (K vs V)."""
         s = s.strip()
         dot_index = s.find(".")
         if dot_index == -1:

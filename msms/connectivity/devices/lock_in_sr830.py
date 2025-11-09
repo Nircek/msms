@@ -14,6 +14,8 @@ INPUT_BUFFER_LIMIT = 256 - 2  # 256 is max command length, -2 for \n and \r
     full_display_name="Stanford Research Lock-In Amplifier SR-830",
 )
 class LockInSr830(DeviceBase):
+    """Stanford Research SR-830 lock-in amplifier driver."""
+
     @classmethod
     def can_handle(cls, idn_parts: GpibIdnParts) -> bool:
         vendor, model, _serial, _version = idn_parts

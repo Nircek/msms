@@ -39,7 +39,6 @@ class DeviceManager(QtCore.QObject):
         self._interval_ms = value
         if self._is_running and self._timer is not None:
             self._timer.setInterval(value)
-            logger.info("Polling interval changed to %d ms", value)
 
     def initialize_visa(self) -> None:
         """Initialise VISA resources once."""
@@ -61,7 +60,6 @@ class DeviceManager(QtCore.QObject):
     def on_acquisition_start_request(self) -> None:
         """Initialize devices and start timer-based polling."""
         if self._is_running:
-            logger.warning("Acquisition already running, ignoring start request.")
             return
 
         if not self._selected_addresses:
@@ -75,9 +73,6 @@ class DeviceManager(QtCore.QObject):
             return
 
         if self._timer is None:
-            current_thread = QtCore.QThread.currentThread()
-            thread_id = int(current_thread.currentThreadId()) if current_thread else 0  # type: ignore[arg-type]
-            logger.info("Creating timer on thread %s (id: %s)", current_thread, thread_id)
             self._timer = QtCore.QTimer(self)
             self._timer.timeout.connect(self._poll_devices)
 
@@ -109,16 +104,13 @@ class DeviceManager(QtCore.QObject):
         if not self._is_running:
             return
 
-        logger.info("Collecting data sample")
         data = self._repository.collect_data()
         self.data_collected.emit(data)
 
     @QtCore.pyqtSlot()
     def on_acquisition_stop_request(self) -> None:
         """Stop polling and clean up device resources."""
-
         if not self._is_running:
-            logger.info("Acquisition not running, nothing to stop")
             return
 
         self._is_running = False
@@ -133,12 +125,10 @@ class DeviceManager(QtCore.QObject):
     @QtCore.pyqtSlot(object)
     def on_device_select_request(self, addresses: list[str]) -> None:
         """Configure which device addresses should be polled."""
-
         self._selected_addresses = addresses
         self._repository.set_selected_addresses(addresses)
-        logger.info("Selected device addresses updated: %s", addresses)
         if self._is_running:
-            logger.warning("Updated device selection will apply on the next restart.")
+            logger.warning("Device selection changed during acquisition; restart required")
 
     @QtCore.pyqtSlot()
     def on_device_info_request(self) -> None:
@@ -149,23 +139,23 @@ class DeviceManager(QtCore.QObject):
     @QtCore.pyqtSlot(object, object)
     def on_device_command_request(self, device_address: str, command: str) -> None:
         """Send a command to a specific device."""
-
         try:
             self._repository.send_command(device_address, command)
-            logger.info("Sent command to %s: %s", device_address, command)
         except Exception:
             logger.exception("Failed to send command to %s: %s", device_address, command)
 
     @QtCore.pyqtSlot(object)
     def on_interval_change_request(self, interval_ms: int) -> None:
         """Update polling interval from a queued signal."""
-
         self.interval_ms = interval_ms
+
+        if self._timer is not None:
+            self._timer.setInterval(interval_ms)
 
     @QtCore.pyqtSlot(object)
     def on_discovery_start_request(self, interval_ms: int) -> None:
+        """Start periodic device discovery polling."""
         if self._discovery_timer is not None and self._discovery_timer.isActive():
-            logger.warning("Discovery already running, ignoring start request.")
             return
 
         try:

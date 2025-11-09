@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
     full_display_name="RS Pro Digital Multi-Meter RSDM3055A",
 )
 class RSDM3055A(DeviceBase):
+    """RS Pro digital multimeter RSDM3055A driver."""
+
     @classmethod
     def can_handle(cls, idn_parts: GpibIdnParts) -> bool:
         _vendor, _model, serial, _version = idn_parts

@@ -1,5 +1,3 @@
-"""CSV persistence service for experiment data and metadata."""
-
 import csv
 import logging
 from dataclasses import dataclass
@@ -105,6 +103,7 @@ class CsvPersistenceService:
         logger.debug("Wrote CSV header: %s", columns)
 
     def write_row(self, row: list[str | float]) -> None:
+        """Write data row to CSV file."""
         if not self._is_active or self.csv_file_writer is None:
             logger.error("Cannot write row: persistence not active")
             return

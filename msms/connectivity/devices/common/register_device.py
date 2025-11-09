@@ -19,6 +19,8 @@ device_registry: list[type[DeviceBase]] = []
 def register_device(
     initials: str, short_display_name: str, full_display_name: str | None = None
 ) -> Callable[[type[DeviceBase]], type[DeviceBase]]:
+    """Decorator to register device class in global registry."""
+
     def decorator(cls: type[DeviceBase]) -> type[DeviceBase]:
         cls.initials = initials
         cls.short_display_name = short_display_name
@@ -33,6 +35,7 @@ def register_device(
 
 
 def find_device_for_idn(idn: str | None) -> type[DeviceBase] | None:
+    """Find registered device class that can handle given IDN string."""
     if idn is None:
         return None
 

@@ -8,6 +8,8 @@ from msms.ui.managers import DeviceManager, StorageManager
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from msms.ui.managers.storage_manager import DataRepository
+
 logger = logging.getLogger(__name__)
 
 
@@ -19,6 +21,10 @@ class ApplicationController(QtCore.QObject):
     device_discovery_stop_requested = QtCore.pyqtSignal()
     device_interval_change_requested = QtCore.pyqtSignal(object)
     device_shutdown_requested = QtCore.pyqtSignal()
+    device_info_requested = QtCore.pyqtSignal()
+    device_command_requested = QtCore.pyqtSignal(object, object)
+    device_info_collected = QtCore.pyqtSignal(object)
+    devices_discovered = QtCore.pyqtSignal(object)
 
     storage_restore_requested = QtCore.pyqtSignal(object)
     storage_export_requested = QtCore.pyqtSignal(object)
@@ -49,8 +55,11 @@ class ApplicationController(QtCore.QObject):
         self.device_discovery_stop_requested.connect(self.device_manager.on_discovery_stop_request)
         self.device_interval_change_requested.connect(self.device_manager.on_interval_change_request)
         self.device_shutdown_requested.connect(self.device_manager.on_shutdown)
+        self.device_info_requested.connect(self.device_manager.on_device_info_request)
+        self.device_command_requested.connect(self.device_manager.on_device_command_request)
 
-        self.device_manager.devices_discovered.connect(self._on_devices_discovered)
+        self.device_manager.devices_discovered.connect(self.devices_discovered)
+        self.device_manager.device_info_collected.connect(self.device_info_collected)
         self.device_manager.acquisition_state_changed.connect(self._on_acquisition_state_changed)
 
         self.storage_restore_requested.connect(self.storage_manager.on_session_restore_request)
@@ -72,31 +81,41 @@ class ApplicationController(QtCore.QObject):
     def is_acquiring(self) -> bool:
         return self._is_device_running
 
+    @property
+    def data_repository(self) -> DataRepository:
+        """Provide controlled read access to storage manager's data repository."""
+        return self.storage_manager._data_repository  # noqa: SLF001
+
+    def get_last_used_file(self) -> Path | None:
+        """Get the path to the last used session file.
+
+        Returns:
+            Path to last session file, or None if no session exists.
+        """
+        return self.storage_manager.get_last_used_file()
+
     def start_discovery(self, interval_ms: int = 2000) -> None:
         """Start periodic device discovery polling.
 
         Args:
             interval_ms: Discovery polling interval in milliseconds.
         """
-        logger.info("Starting device discovery with interval %d ms", interval_ms)
         self.device_discovery_start_requested.emit(interval_ms)
 
     def stop_discovery(self) -> None:
         """Stop periodic device discovery polling."""
-        logger.info("Stopping device discovery")
         self.device_discovery_stop_requested.emit()
 
     def start_acquisition(self) -> None:
         """Start device acquisition."""
         if self.is_acquiring:
-            logger.warning("Acquisition already running")
             return
 
         if not self._selected_device_addresses:
             logger.warning("Cannot start acquisition without selected devices")
             return
 
-        logger.info("Starting acquisition with interval %d ms", self.current_interval_ms)
+        logger.info("Starting acquisition")
         self.device_interval_change_requested.emit(self.current_interval_ms)
         # self.storage_stop_requested.emit()
         # self.storage_session_start_requested.emit()
@@ -106,7 +125,6 @@ class ApplicationController(QtCore.QObject):
     def stop_acquisition(self) -> None:
         """Stop device acquisition."""
         if not self.is_acquiring:
-            logger.info("Device manager already stopped")
             return
 
         logger.info("Stopping acquisition")
@@ -118,49 +136,33 @@ class ApplicationController(QtCore.QObject):
         Args:
             interval_ms: New polling interval in milliseconds.
         """
-        logger.info("Changing interval to %d ms", interval_ms)
         self.current_interval_ms = interval_ms
         self.device_interval_change_requested.emit(interval_ms)
 
     def shutdown(self) -> None:
         """Clean up threads and resources."""
-        current_thread = QtCore.QThread.currentThread()
-        thread_id = int(current_thread.currentThreadId()) if current_thread else 0  # type: ignore[arg-type]
-        logger.info("Shutting down application controller from thread %s (id: %s)", current_thread, thread_id)
-        logger.info("Acquisition running: %s", self._is_device_running)
+        logger.info("Shutting down application controller")
 
         self.device_shutdown_requested.emit()
-        logger.info("Sent device shutdown signal")
-
         self.storage_stop_requested.emit()
-        logger.info("Sent storage stop signal")
 
-        # Process events briefly to ensure stop signals are delivered and processed
-        # before we quit the threads
         QtWidgets.QApplication.processEvents()
 
-        # logger.info("Quitting device manager thread")
         self.device_manager_thread.quit()
-        # logger.info("Quitting storage manager thread")
         self.storage_manager_thread.quit()
 
-        logger.info("Waiting for device manager thread (500ms)")
         device_finished = self.device_manager_thread.wait(500)
         if not device_finished:
             logger.warning("Device manager thread did not finish within timeout")
 
-        logger.info("Waiting for storage manager thread (500ms)")
         storage_finished = self.storage_manager_thread.wait(500)
         if not storage_finished:
             logger.warning("Storage manager thread did not finish within timeout")
-
-        logger.info("Shutdown complete")
 
     def update_selected_devices(self, addresses: list[str]) -> None:
         """Update the set of selected device VISA addresses."""
 
         self._selected_device_addresses = addresses
-        logger.info("Selected devices updated: %s", addresses)
         self.device_selection_requested.emit(self._selected_device_addresses)
 
     def request_restore_session(self, path: Path | None = None) -> None:
@@ -178,11 +180,20 @@ class ApplicationController(QtCore.QObject):
 
         self.storage_description_change_requested.emit(description)
 
-    @QtCore.pyqtSlot(object)
-    @staticmethod
-    def _on_devices_discovered(devices: object) -> None:
-        """Log discovered devices (currently unused)."""
-        logger.debug("Devices discovered: %s", devices)
+    def request_device_info(self) -> None:
+        """Request device information from device manager."""
+
+        self.device_info_requested.emit()
+
+    def send_device_command(self, address: str, command: str) -> None:
+        """Send command to specific device.
+
+        Args:
+            address: VISA resource address of target device.
+            command: SCPI command to send.
+        """
+
+        self.device_command_requested.emit(address, command)
 
     @QtCore.pyqtSlot(object)
     def _on_acquisition_state_changed(self, running: bool) -> None:

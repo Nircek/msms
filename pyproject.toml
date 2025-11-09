@@ -53,7 +53,14 @@ preview = true
 
 [tool.ruff.lint]
 fixable = ["ALL"]
-ignore = ["COM812", "D203", "D212"]
+ignore = [
+  "COM812",
+  "D203",
+  "D212",
+  "DOC201",
+  "DOC402",
+  "DOC501"
+]
 preview = true
 select = [
   "A",

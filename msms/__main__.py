@@ -2,8 +2,12 @@ import logging
 import signal
 import sys
 import time
+from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore, QtWidgets
+
+if TYPE_CHECKING:
+    from types import FrameType
 
 from msms.connectivity.device_repository import DeviceRepository
 from msms.connectivity.visa import get_visa_library
@@ -12,6 +16,7 @@ from msms.ui.main_window import MainWindow
 
 
 def main() -> None:
+    """Run CLI mode with device polling loop."""
     setup_logging()
 
     logger = logging.getLogger(__name__)
@@ -41,6 +46,7 @@ def main() -> None:
 
 
 def ui() -> None:
+    """Run PyQt6 GUI application."""
     setup_logging()
 
     logger = logging.getLogger(__name__)
@@ -52,7 +58,7 @@ def ui() -> None:
 
     win = MainWindow()
 
-    def handle_sigint(*_: object) -> None:
+    def handle_sigint(_signum: int, _frame: FrameType | None) -> None:
         logger.info("SIGINT received, shutting down UI")
         win.close()
 

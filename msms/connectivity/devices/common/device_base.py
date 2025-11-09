@@ -40,20 +40,21 @@ class DeviceBase(ABC):
     @classmethod
     @abstractmethod
     def can_handle(cls, idn_parts: GpibIdnParts) -> bool:
-        pass
+        """Check if this device class can handle the given IDN response."""
 
     @abstractmethod
     def initialize(self) -> None:
-        pass
+        """Perform device-specific initialization after connection."""
 
     @abstractmethod
     def update(self) -> dict[str, str]:
-        pass
+        """Query device and return current readings as string dict."""
 
     @contextmanager
     def error_cool_down_context_manager(
         self, *, bypass: bool = False, can_be_executed_after: bool = True
     ) -> Iterator[None]:
+        """Prevent repeated operations on failing devices via cool-down period."""
         if not hasattr(self, "_resource"):
             raise RuntimeError(DEVICE_NOT_INITIALIZED_ERROR)
         if not bypass:
@@ -73,11 +74,13 @@ class DeviceBase(ABC):
             self._error_cool_down_cause = None
 
     def close(self) -> None:
+        """Close VISA resource connection."""
         with self.error_cool_down_context_manager(bypass=True):
             self._resource.close()
         del self._resource
 
     def command_resource(self, cmd: str, force: bool = False) -> None:
+        """Send SCPI command to device."""
         self._last_command_time = self._last_read_time = time()
         with self.error_cool_down_context_manager(bypass=force):
             self._resource.write(cmd)
@@ -85,6 +88,7 @@ class DeviceBase(ABC):
         print(f"{self.initials}: {cmd!r} -- [{t1 - self._last_command_time:.1f}ms, T0]")
 
     def query_resource(self, cmd: str) -> str:
+        """Send SCPI query and return response."""
         response, t0 = None, time()
         with self.error_cool_down_context_manager():
             response = self._resource.query(cmd)
@@ -96,6 +100,7 @@ class DeviceBase(ABC):
         return response
 
     def read_resource(self) -> str:
+        """Read buffered response from device."""
         response = self._error_cool_down_cause
         with self.error_cool_down_context_manager(can_be_executed_after=False):
             response = self._resource.read()

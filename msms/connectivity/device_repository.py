@@ -107,9 +107,7 @@ class DeviceRepository:
 
     def set_selected_addresses(self, addresses: list[str]) -> None:
         """Persist the currently selected VISA addresses."""
-
         self._selected_addresses = set(addresses)
-        logger.info("Selected device addresses stored: %s", sorted(self._selected_addresses))
 
     def prepare_devices(self) -> None:
         """Instantiate device drivers for the selected VISA resources.
@@ -174,6 +172,7 @@ class DeviceRepository:
             self._devices.append(device_instance)
 
     def get_devices_info(self) -> dict[str, DiscoveredDevice]:
+        """Return discovered device info keyed by address."""
         return self._devices_info
 
     def initialize_devices(self) -> None:

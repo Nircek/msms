@@ -1,5 +1,3 @@
-"""Controller for managing experiment actions and device interactions."""
-
 import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class ExperimentController:
-    """Manage experiment action menu and related dialogs."""
+    """Experiment action menu and related dialogs."""
 
     def __init__(
         self,
@@ -21,24 +19,16 @@ class ExperimentController:
         button: QtWidgets.QPushButton,
         app_controller: ApplicationController,
     ) -> None:
-        """Initialize the experiment controller.
-
-        Args:
-            parent: Parent widget for dialogs.
-            button: The action button widget.
-            app_controller: Application controller for device/storage operations.
-        """
         self.parent = parent
         self.button = button
         self.app_controller = app_controller
         self._selected_device_addresses: list[str] = []
 
     def set_selected_devices(self, addresses: list[str]) -> None:
-        """Update the selected device addresses."""
         self._selected_device_addresses = addresses
 
     def show_action_menu(self) -> None:
-        """Display the action menu for controlling acquisition and exports."""
+        """Show action menu for acquisition and exports."""
         menu = QtWidgets.QMenu(self.parent)
 
         if self.app_controller.is_acquiring:
@@ -74,7 +64,7 @@ class ExperimentController:
         menu.exec(QtGui.QCursor.pos())
 
     def _start_acquisition(self) -> None:
-        """Start asynchronous device data acquisition."""
+        """Start device acquisition."""
         if not self._selected_device_addresses:
             QtWidgets.QMessageBox.warning(
                 self.parent,
@@ -87,12 +77,12 @@ class ExperimentController:
         self.app_controller.start_acquisition()
 
     def _stop_acquisition(self) -> None:
-        """Stop acquisition thread."""
+        """Stop acquisition."""
         logger.info("Stopping device manager")
         self.app_controller.stop_acquisition()
 
     def export_data_to_csv(self) -> None:
-        """Open a save dialog and export the current dataset."""
+        """Export data to CSV via save dialog."""
         dialog = QtWidgets.QFileDialog(self.parent)
         dialog.setWindowTitle("Export Data to CSV")
         dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptSave)
@@ -104,12 +94,10 @@ class ExperimentController:
             self.app_controller.request_export_to_csv(export_path)
 
     def _set_interval(self, value_ms: int) -> None:
-        """Update device polling interval."""
         logger.info("Changing device manager interval to %d ms", value_ms)
         self.app_controller.set_interval(value_ms)
 
     def _open_device_command_dialog(self) -> None:
-        """Open the device command dialog."""
         # Import here to avoid circular dependency
         from msms.ui.dialogs.device_command_dialog import DeviceCommandDialog  # noqa: PLC0415
 

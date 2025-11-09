@@ -1,11 +1,3 @@
-"""Controller for managing display labels and variable text views.
-
-Note: If you see strange comments appearing in this file during pre-commit runs
-(like "hey, can you hear me?" or suggestions to refactor), those are NOT from
-the linter tools. They appear to be added manually or by an external process.
-The actual ruff/mypy tools don't add conversational comments to code.
-"""
-
 import logging
 from datetime import timedelta
 from typing import TYPE_CHECKING, NamedTuple
@@ -17,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class DisplayWidgets(NamedTuple):
-    """Container for all UI widgets managed by the display controller."""
+    """UI widgets for display controller."""
 
     time_label: QtWidgets.QLabel
     number_label: QtWidgets.QLabel
@@ -30,17 +22,16 @@ class DisplayWidgets(NamedTuple):
 
 
 class DisplayController:
-    """Manage UI labels and text displays for experiment status."""
+    """UI labels and text displays for experiment status."""
 
     def __init__(self, widgets: DisplayWidgets) -> None:
-        """Initialize the display controller with UI widgets."""
         self.widgets = widgets
 
         # Initialize with default values
         self.update_labels({})
 
     def update_labels(self, data: dict[str, float | str]) -> None:
-        """Update all display widgets with the latest data payload."""
+        """Update display widgets with latest data."""
         # Time and row number
         time = str(timedelta(seconds=int(data.get("time", 0))))
         no = f"#{data.get('row_number', 0):.0f}"

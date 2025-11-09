@@ -8,6 +8,7 @@ logs_dir = Path("logs")
 
 
 def get_logs_file_path(suffix: str, prefix: str | None = None) -> Path:
+    """Generate timestamped log file path."""
     logs_dir.mkdir(exist_ok=True)
     if prefix is None:
         prefix = f"msms_{init_timestamp}"
@@ -16,6 +17,7 @@ def get_logs_file_path(suffix: str, prefix: str | None = None) -> Path:
 
 
 def setup_logging(log_level: int = logging.DEBUG) -> None:
+    """Configure root logger with console and rotating file handlers."""
     log_file_path = get_logs_file_path(".log")
 
     formatter = logging.Formatter(

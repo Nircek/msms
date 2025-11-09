@@ -1,7 +1,6 @@
-"""Coordinate data transformation and persistence for acquisition system."""
+from __future__ import annotations
 
 import logging
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -10,24 +9,16 @@ from PyQt6 import QtCore
 from msms.ui.managers.csv_persistence_service import CsvPersistenceService, SessionSnapshot
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from pathlib import Path
 
-EXPORT_PAYLOAD_SIZE = 2
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
 
 def to_float(s: str) -> str | float:
-    """Convert a trimmed string to float when possible.
-
-    Args:
-        s: String representation of a value.
-
-    Returns:
-        Either ``float`` when the string represents a numeric value or the original
-        string when conversion fails.
-    """
-
+    """Convert trimmed string to float or return original string."""
     s = s.strip()
     try:
         return float(s)
@@ -36,15 +27,7 @@ def to_float(s: str) -> str | float:
 
 
 def float_or_nan(v: str | float) -> float:
-    """Return numeric input unchanged or ``np.nan`` for strings.
-
-    Args:
-        v: Value that may already be numeric.
-
-    Returns:
-        ``float``: either the supplied float value or ``np.nan``.
-    """
-
+    """Return float unchanged or np.nan for strings."""
     return np.nan if isinstance(v, str) else v
 
 
@@ -63,8 +46,7 @@ class DataRepository:
 
     @property
     def data(self) -> np.ndarray:
-        """Return currently populated rows as a numpy array view."""
-
+        """Return populated rows as numpy array view."""
         if self.capacity == 0:
             return np.ndarray([])
         self._mutex.lock()
@@ -74,25 +56,17 @@ class DataRepository:
 
     @property
     def columns(self) -> tuple[str, ...] | None:
-        """Return configured numeric column names."""
-
+        """Return numeric column names."""
         return None if self._columns is None else tuple(self._columns)
 
     def initialize(self, columns: list[str], *, capacity: int = 1024) -> None:
-        """Allocate internal storage and remember column ordering.
-
-        Args:
-            columns: Ordered list of numeric column names.
-            capacity: Initial capacity to allocate.
-        """
-
+        """Allocate internal storage and remember column ordering."""
         assert self._columns is None, "DataRepository is already initialized"
         self._columns = columns
         self._grow(capacity)
 
     def load_snapshot(self, columns: list[str], rows: list[list[float]]) -> None:
-        """Populate storage from a historical snapshot."""
-
+        """Populate storage from historical snapshot."""
         assert self._columns is None, "DataRepository is already initialized"
         row_count = len(rows)
         column_count = len(columns)
@@ -108,12 +82,7 @@ class DataRepository:
         self._mutex.unlock()
 
     def append(self, row: list[float]) -> None:
-        """Append a numeric row, growing storage if necessary.
-
-        Args:
-            row: Numeric values aligned with configured columns.
-        """
-
+        """Append numeric row, growing storage if necessary."""
         if self.size >= self.capacity:
             self._grow()
         self._mutex.lock()
@@ -122,8 +91,7 @@ class DataRepository:
         self._mutex.unlock()
 
     def _grow(self, new_capacity: int | None = None) -> None:
-        """Double storage or grow to ``new_capacity`` while preserving data."""
-
+        """Double storage or grow to new_capacity, preserving data."""
         assert self._columns is not None, "DataRepository is not initialized"
         if new_capacity is None:
             new_capacity = max(2 * self.capacity, 1024)
@@ -139,19 +107,21 @@ class DataRepository:
 
 
 class StorageManager(QtCore.QObject):
-    """Coordinate data transformation, persistence, and UI signals."""
+    """Data transformation, persistence, and UI signals."""
 
-    new_data_row = QtCore.pyqtSignal(object)
+    data_changed = QtCore.pyqtSignal()
     columns_changed = QtCore.pyqtSignal(object)
-    description_changed = QtCore.pyqtSignal(object)
+    new_data_row = QtCore.pyqtSignal(object)
+    restore_completed = QtCore.pyqtSignal()
     restore_failed = QtCore.pyqtSignal(object)
     export_completed = QtCore.pyqtSignal(object)
     export_failed = QtCore.pyqtSignal(object)
+    description_changed = QtCore.pyqtSignal(object)
 
     def __init__(self) -> None:
         super().__init__()
         self._is_running = False
-        self.data_repository = DataRepository()
+        self._data_repository = DataRepository()
         self.csv_persistence = CsvPersistenceService()
         self.row_number = 1
         self.t0 = 0.0
@@ -160,13 +130,13 @@ class StorageManager(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def on_session_start_request(self) -> None:
-        """Start a new acquisition session."""
+        """Start new acquisition session."""
         if self.csv_persistence.is_active:
             logger.warning("Persistence session already active")
             return
 
         self.csv_persistence = CsvPersistenceService()
-        self.data_repository = DataRepository()
+        self._data_repository = DataRepository()
         self.columns = []
         self.number_columns = []
         self.row_number = 1
@@ -176,24 +146,17 @@ class StorageManager(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def on_stop_request(self) -> None:
-        """Stop recording and close resources."""
         self._is_running = False
         self.csv_persistence.stop_session()
 
     def get_last_used_file(self) -> Path | None:
-        """Return the most recently completed CSV file if it exists.
-
-        Returns:
-            Path to the previous CSV file or None when unavailable.
-        """
+        """Return most recent CSV file or None."""
         return self.csv_persistence.get_last_used_file()
 
     @QtCore.pyqtSlot(object)
-    def on_session_restore_request(self, target: object) -> None:
+    def on_session_restore_request(self, target: Path | None) -> None:
         """Restore a previously recorded session and notify the UI."""
-
-        path = self._coerce_optional_path(target)
-        resolved = self.csv_persistence.resolve_restore_target(path)
+        resolved = self.csv_persistence.resolve_restore_target(target)
         if resolved is None:
             message = "No previous session available to restore."
             logger.info(message)
@@ -216,10 +179,9 @@ class StorageManager(QtCore.QObject):
         self._apply_snapshot(snapshot)
 
     @QtCore.pyqtSlot(object)
-    def on_export_request(self, request: object) -> None:
-        """Export currently stored data into a user-provided CSV path."""
-
-        export_path, columns = self._unpack_export_request(request)
+    def on_export_request(self, request: tuple[Path, list[str] | None]) -> None:
+        """Export data to CSV."""
+        export_path, columns = request
         if export_path is None:
             message = "Export request missing path."
             logger.error(message)
@@ -236,15 +198,15 @@ class StorageManager(QtCore.QObject):
         self.export_completed.emit(str(export_path))
 
     @QtCore.pyqtSlot(object)
-    def on_description_change_request(self, description: object) -> None:
-        """Persist the textual experiment description alongside the CSV file."""
-
+    def on_description_change_request(self, description: str) -> None:
+        """Persist experiment description to file."""
         description_text = "" if description is None else str(description)
         self.csv_persistence.set_description(description_text)
         # self.description_changed.emit(description_text) -- do not emit, UI already knows
 
-    def on_header_set_request(self, initial_data: Mapping[str, str]) -> None:
-        """Configure CSV header and emit column information for the UI."""
+    @QtCore.pyqtSlot(object)
+    def on_header_set_request(self, initial_data: dict[str, str]) -> None:
+        """Configure CSV header and emit columns to UI."""
         if not self.csv_persistence.is_active:
             logger.error("Cannot set header: persistence not active")
             return
@@ -253,19 +215,20 @@ class StorageManager(QtCore.QObject):
         additional_columns = [col for col in self.transform_data({})[0] if col not in base_columns]
         self.columns = base_columns + additional_columns
         self.number_columns = [col for col in self.columns if not col.startswith("_")]
-        self.data_repository.initialize(self.number_columns)
+        self._data_repository.initialize(self.number_columns)
         self.csv_persistence.write_header(self.columns)
         self.columns_changed.emit(self.number_columns)
         self._is_running = True
 
+    @QtCore.pyqtSlot(object)
     def on_data_append_request(self, data: dict[str, str]) -> None:
-        """Handle new acquisition payload and update caches and CSV."""
+        """Handle new acquisition payload."""
         if not self._is_running:
             return
 
         parsed_data, row, number_row = self.transform_data(data)
         self.new_data_row.emit(parsed_data)
-        self.data_repository.append(number_row)
+        self._data_repository.append(number_row)
         self.csv_persistence.write_row(row)
         self.row_number += 1
 
@@ -280,8 +243,8 @@ class StorageManager(QtCore.QObject):
         self.columns = list(snapshot.columns)
         self.number_columns = list(snapshot.numeric_columns)
 
-        self.data_repository = DataRepository()
-        self.data_repository.load_snapshot(snapshot.numeric_columns, snapshot.numeric_rows)
+        self._data_repository = DataRepository()
+        self._data_repository.load_snapshot(snapshot.numeric_columns, snapshot.numeric_rows)
 
         last_row_index = snapshot.row_count
         self.row_number = last_row_index if last_row_index > 0 else 1
@@ -294,36 +257,6 @@ class StorageManager(QtCore.QObject):
 
         self.columns_changed.emit(self.number_columns)
         self.description_changed.emit(snapshot.description)
-
-    @staticmethod
-    def _coerce_optional_path(target: object) -> Path | None:
-        if target in {None, ""}:
-            return None
-        if isinstance(target, Path):
-            return target
-        try:
-            return Path(str(target))
-        except Exception:
-            logger.exception("Unable to interpret restore target %r", target)
-            return None
-
-    def _unpack_export_request(self, request: object) -> tuple[Path | None, list[str] | None]:
-        if isinstance(request, tuple) and len(request) == EXPORT_PAYLOAD_SIZE:
-            target, columns = request
-            return self._coerce_optional_path(target), self._coerce_columns(columns)
-        if isinstance(request, dict):
-            target = request.get("path")
-            columns = request.get("columns")
-            return self._coerce_optional_path(target), self._coerce_columns(columns)
-        return self._coerce_optional_path(request), None
-
-    @staticmethod
-    def _coerce_columns(columns: object) -> list[str] | None:
-        if columns is None:
-            return None
-        if isinstance(columns, (list, tuple)):
-            return [str(col) for col in columns]
-        return [str(columns)]
 
     def transform_data(self, data: Mapping[str, str]) -> tuple[dict[str, str | float], list[str | float], list[float]]:
         """Convert a string payload into miscellaneous and numeric representations.

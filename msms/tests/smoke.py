@@ -59,12 +59,11 @@ def main() -> int:
 
         discovered_devices: list = []
 
-        def capture_devices(devices: object) -> None:
-            if isinstance(devices, list):
-                discovered_devices.clear()
-                discovered_devices.extend(devices)
+        def capture_devices(devices: list) -> None:
+            discovered_devices.clear()
+            discovered_devices.extend(devices)
 
-        window.app_controller.device_manager.devices_discovered.connect(capture_devices)
+        window.app_controller.devices_discovered.connect(capture_devices)
 
         # Start device discovery and wait for devices to be discovered
         window.app_controller.start_discovery(interval_ms=500)

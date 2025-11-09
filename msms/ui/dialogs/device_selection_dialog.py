@@ -26,11 +26,12 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
 
         self._setup_ui()
 
-        self._app_controller.device_manager.devices_discovered.connect(self._on_devices_discovered)
+        self._app_controller.devices_discovered.connect(self._on_devices_discovered)
         self._app_controller.start_discovery(interval_ms=2000)
         self.finished.connect(lambda *_: self._app_controller.stop_discovery())
 
     def _setup_ui(self) -> None:
+        """Create dialog UI with device table and buttons."""
         layout = QtWidgets.QVBoxLayout(self)
 
         self.status_label = QtWidgets.QLabel("Scanning for devices...")
@@ -61,6 +62,7 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
         self.status_label.setText(f"Found {len(self.discovered_devices)} device(s)")
 
     def _update_device_table(self) -> None:
+        """Populate table with discovered devices and restore selection."""
         self.device_table.setRowCount(len(self.discovered_devices))
 
         for row, device_info in enumerate(self.discovered_devices):
@@ -91,6 +93,7 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
         self.device_table.resizeColumnsToContents()
 
     def get_selected_addresses(self) -> list[str]:
+        """Return sorted list of selected device addresses."""
         self._capture_selection()
         return sorted(self._selected_addresses)
 

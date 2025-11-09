@@ -1,5 +1,3 @@
-"""Dialog for sending commands to devices."""
-
 import logging
 from typing import TYPE_CHECKING
 
@@ -55,16 +53,12 @@ class DeviceCommandDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-        self.app_controller.device_manager.device_info_collected.connect(self._on_device_info_received)
-        self.app_controller.device_manager.on_device_info_request()
+        self.app_controller.device_info_collected.connect(self._on_device_info_received)
+        self.app_controller.request_device_info()
 
     @QtCore.pyqtSlot(object)
-    def _on_device_info_received(self, device_info: object) -> None:
+    def _on_device_info_received(self, device_info: dict[str, DiscoveredDevice]) -> None:
         """Handle device info response from the device manager."""
-        if not isinstance(device_info, dict):
-            logger.warning("Received invalid device info: %r", device_info)
-            return
-
         self._device_info = device_info
         self.device_combo.clear()
 
@@ -79,7 +73,7 @@ class DeviceCommandDialog(QtWidgets.QDialog):
             self.device_combo.setEnabled(False)
 
         # Disconnect signal to avoid multiple connections
-        self.app_controller.device_manager.device_info_collected.disconnect(self._on_device_info_received)
+        self.app_controller.device_info_collected.disconnect(self._on_device_info_received)
 
     def _send_command(self) -> None:
         """Send the command to the selected device."""
@@ -94,8 +88,7 @@ class DeviceCommandDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, "No Command", "Please enter a command to send.")
             return
 
-        logger.info("Sending command to %s: %s", device_address, command)
-        self.app_controller.device_manager.on_device_command_request(device_address, command)
+        self.app_controller.send_device_command(device_address, command)
 
         QtWidgets.QMessageBox.information(
             self,

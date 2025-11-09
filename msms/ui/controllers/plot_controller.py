@@ -1,5 +1,3 @@
-"""Controller for managing plot visualization and interaction."""
-
 import logging
 from typing import TYPE_CHECKING, cast
 
@@ -22,10 +20,9 @@ def clamp_to_float_precision(value: float) -> float:
 
 
 class PlotController(QtCore.QObject):
-    """Manage plot widget state, auto-follow, and user interaction."""
+    """Plot widget state, auto-follow, and user interaction."""
 
     def __init__(self, plot_widget: pg.PlotWidget, auto_follow_checkbox: QtWidgets.QCheckBox) -> None:
-        """Initialize the plot controller."""
         super().__init__()
         self.plot_widget = plot_widget
         self.auto_follow_checkbox = auto_follow_checkbox
@@ -63,13 +60,7 @@ class PlotController(QtCore.QObject):
 
     @staticmethod
     def _is_dark_theme() -> bool:
-        """Detect if the OS is using a dark theme using Qt6 QStyleHints.
-
-        Returns:
-            True if dark theme is detected, False otherwise.
-        Raises:
-            RuntimeError: If Qt version is older than 6.5 and color scheme detection is not possible.
-        """
+        """Detect if OS is using a dark theme (Qt 6.5+)."""
         gui_app = cast("QGuiApplication", QGuiApplication.instance())
         if gui_app is None:
             return False
@@ -96,14 +87,7 @@ class PlotController(QtCore.QObject):
 
     @staticmethod
     def _get_plot_colors(is_dark: bool) -> tuple[str, str]:
-        """Get appropriate plot colors based on theme.
-
-        Args:
-            is_dark: Whether the theme is dark.
-
-        Returns:
-            Tuple of (line_color, marker_color) suitable for the theme.
-        """
+        """Get plot line and marker colors for theme."""
         if is_dark:
             # Dark theme: bright colors for visibility
             return "#00D4FF", "#00D4FF"  # Cyan for both line and markers
@@ -111,7 +95,7 @@ class PlotController(QtCore.QObject):
         return "#1f77b4", "#1f77b4"  # Professional blue
 
     def _configure_plot_style(self, is_dark: bool) -> None:
-        """Configure plot background, grid, and labels based on theme."""
+        """Configure plot background, grid, and labels for theme."""
         if is_dark:
             # Dark theme styling
             self.plot_widget.setBackground("#1e1e1e")
@@ -132,10 +116,10 @@ class PlotController(QtCore.QObject):
         self.plot_widget.setTitle("Temperature vs Time", color=text_color, size="14pt")
         label_styles = {"color": text_color, "font-size": "12pt"}
         self.plot_widget.setLabel("left", "Temperature (°C)", **label_styles)
-        self.plot_widget.setLabel("bottom", "Time (s)", **label_styles)
+        self.plot_widget.setLabel("bottom", "Sample Index", color=text_color)
 
     def _connect_theme_change_signal(self) -> None:
-        """Connect to the OS theme change signal to update plot styling dynamically."""
+        """Connect to OS theme change signal."""
         gui_app = cast("QGuiApplication", QGuiApplication.instance())
         if gui_app is None:
             return
@@ -153,11 +137,7 @@ class PlotController(QtCore.QObject):
 
     @QtCore.pyqtSlot(Qt.ColorScheme)
     def _on_theme_changed(self, color_scheme: Qt.ColorScheme) -> None:
-        """Handle OS theme changes and update plot styling.
-
-        Args:
-            color_scheme: The new color scheme from Qt (Qt.ColorScheme enum).
-        """
+        """Handle OS theme change and update plot styling."""
         is_dark = color_scheme == Qt.ColorScheme.Dark  # type: ignore[comparison-overlap]
         logger.info("OS theme changed, dark mode: %s", is_dark)
 
@@ -173,12 +153,11 @@ class PlotController(QtCore.QObject):
         self.plot_item.setData(self.xs, self.ys)
 
     def set_column(self, column: str) -> None:
-        """Change the Y-axis column being plotted."""
         logger.info("Plot column changed to: %s", column)
         self.current_column = column
 
     def refresh_from_repository(self, data_repository: DataRepository) -> None:
-        """Update plot data from the data repository."""
+        """Update plot data from repository."""
         columns = list(data_repository.columns or [])
         data = data_repository.data
 
@@ -201,7 +180,7 @@ class PlotController(QtCore.QObject):
             self._restore_user_view()
 
     def _update_auto_follow_view(self) -> None:
-        """Pan the chart to show the latest samples when auto-follow is on."""
+        """Pan chart to show latest samples."""
         if self.xs.size > 0:
             new_xrange = [self.xs[0], self.xs[-1]]
 
@@ -214,7 +193,7 @@ class PlotController(QtCore.QObject):
             QtCore.QTimer.singleShot(150, lambda: setattr(self, "_programmatic_update", False))
 
     def _restore_user_view(self) -> None:
-        """Restore the user's manually set view range."""
+        """Restore user's manual view range."""
         if self._last_user_xrange is not None:
             self._programmatic_update = True
             self.plot_widget.setXRange(self._last_user_xrange[0], self._last_user_xrange[1], padding=0)
@@ -222,21 +201,20 @@ class PlotController(QtCore.QObject):
         self.plot_widget.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False)
 
     def _on_x_range_changed(self, _view_box: ViewBox, range_: list[float]) -> None:
-        """Track manual X range changes to disable auto-follow."""
+        """Track manual X range changes."""
         if self._programmatic_update:
             return
         self.auto_follow_checkbox.setChecked(False)
         self._last_user_xrange = [clamp_to_float_precision(range_[0]), clamp_to_float_precision(range_[1])]
 
     def _on_y_range_changed(self, _view_box: ViewBox, range_: list[float]) -> None:
-        """Track manual Y range changes to disable auto-follow."""
+        """Track manual Y range changes."""
         if self._programmatic_update:
             return
         self.auto_follow_checkbox.setChecked(False)
         self._last_user_yrange = [clamp_to_float_precision(range_[0]), clamp_to_float_precision(range_[1])]
 
     def _on_auto_follow_toggled(self, checked: bool) -> None:
-        """Enable or disable automatic chart panning."""
         logger.info("Auto-follow toggled: %s", checked)
         if checked and self.xs.size > 0:
             self._update_auto_follow_view()
