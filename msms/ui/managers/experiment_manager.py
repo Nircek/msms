@@ -1,7 +1,5 @@
 """Experiment orchestration manager (Step Runner)."""
 
-from __future__ import annotations
-
 import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
@@ -27,6 +25,7 @@ class ExperimentManager(QtCore.QObject):
     experiment_started = QtCore.pyqtSignal()
     experiment_stopped = QtCore.pyqtSignal()
     experiment_log_updated = QtCore.pyqtSignal(object)
+    device_command_requested = QtCore.pyqtSignal(object, object)
 
     def __init__(self) -> None:
         """Initialize experiment manager with empty plan."""
@@ -36,10 +35,6 @@ class ExperimentManager(QtCore.QObject):
         self._is_running = False
         self._timer: QtCore.QTimer | None = None
         self._latest_data: dict[str, str | float] = {}
-
-        # References to other services (injected via slots)
-        self._device_manager_ref = None
-        self._storage_manager_ref = None
 
     @property
     def is_running(self) -> bool:
@@ -66,22 +61,13 @@ class ExperimentManager(QtCore.QObject):
         return self._latest_data.copy()
 
     def send_device_command(self, device_address: str, command: str) -> None:
-        """Send command to device via DeviceManager.
+        """Send command to device via signal.
 
         Args:
             device_address: VISA address of target device.
             command: SCPI command string to send.
         """
-        controller = self.parent()
-        if controller is None:
-            logger.error("ExperimentManager parent not set, cannot send command")
-            return
-
-        # Use parent controller's signal to send command request
-        if hasattr(controller, "device_command_requested"):
-            controller.device_command_requested.emit(device_address, command)  # type: ignore[attr-defined]
-        else:
-            logger.error("Parent controller does not have device_command_requested signal")
+        self.device_command_requested.emit(device_address, command)
 
     @QtCore.pyqtSlot(object)
     def on_set_steps(self, steps: list[Step]) -> None:

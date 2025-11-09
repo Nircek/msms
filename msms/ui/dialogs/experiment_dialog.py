@@ -1,20 +1,11 @@
 """Dialog for managing experiment plans."""
 
-from __future__ import annotations
-
 import logging
-from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
 from PyQt6 import QtWidgets
 
-from msms.ui.experiment import (
-    SetSetpointStep,
-    StopProgramStep,
-    WaitForConditionStep,
-    WaitForDatetimeStep,
-    WaitForDurationStep,
-)
+from msms.ui.experiment import step_registry
 
 if TYPE_CHECKING:
     from msms.ui.controllers.app_controller import ApplicationController
@@ -136,15 +127,18 @@ class ExperimentDialog(QtWidgets.QDialog):
         else:
             self.status_label.setText("Not running")
 
-    def _add_step(self) -> None:  # noqa: C901, PLR0912
+    def _add_step(self) -> None:
         """Show dialog to add a new step."""
-        step_types = [
-            "Wait for Duration",
-            "Wait for Datetime",
-            "Wait for Condition",
-            "Set Setpoint",
-            "Stop Program",
-        ]
+        # Get list of registered step types
+        step_types = [step_class.display_name for step_class in step_registry]
+
+        if not step_types:
+            QtWidgets.QMessageBox.warning(
+                self,
+                "No Steps Available",
+                "No step types are registered.",
+            )
+            return
 
         step_type, ok = QtWidgets.QInputDialog.getItem(
             self,
@@ -158,90 +152,28 @@ class ExperimentDialog(QtWidgets.QDialog):
         if not ok:
             return
 
+        # Find the step class
+        step_class = None
+        for cls in step_registry:
+            if cls.display_name == step_type:
+                step_class = cls
+                break
+
+        if step_class is None:
+            return
+
+        # Generate unique step ID
         step_id = f"step_{len(self.steps) + 1}"
 
-        if step_type == "Wait for Duration":
-            duration, ok = QtWidgets.QInputDialog.getDouble(
-                self,
-                "Wait for Duration",
-                "Duration (seconds):",
-                10.0,
-                0.1,
-                86400.0,
-                1,
-            )
-            if ok:
-                self.steps.append(WaitForDurationStep(step_id, duration))
+        # Let the step class create its configuration dialog and instance
+        dialog = step_class.create_config_dialog(self)
+        step_instance = step_class.create_from_dialog(dialog, step_id)
 
-        elif step_type == "Wait for Datetime":
-            future_time = datetime.now(UTC) + timedelta(minutes=5)
-            datetime_str, ok = QtWidgets.QInputDialog.getText(
-                self,
-                "Wait for Datetime",
-                "Datetime (ISO format, default +5min):",
-                text=future_time.isoformat(),
-            )
-            if ok:
-                try:
-                    target_dt = datetime.fromisoformat(datetime_str)
-                    self.steps.append(WaitForDatetimeStep(step_id, target_dt))
-                except ValueError as e:
-                    QtWidgets.QMessageBox.warning(self, "Invalid Datetime", str(e))
-                    return
-
-        elif step_type == "Wait for Condition":
-            column, ok = QtWidgets.QInputDialog.getText(
-                self,
-                "Wait for Condition",
-                "Column name:",
-            )
-            if not ok:
-                return
-
-            threshold, ok = QtWidgets.QInputDialog.getDouble(
-                self,
-                "Wait for Condition",
-                "Threshold value:",
-                100.0,
-                -1000000.0,
-                1000000.0,
-                2,
-            )
-            if not ok:
-                return
-
-            comparison, ok = QtWidgets.QInputDialog.getItem(
-                self,
-                "Wait for Condition",
-                "Comparison:",
-                [">=", "<=", ">", "<", "==", "!="],
-                0,
-                False,
-            )
-            if ok:
-                self.steps.append(WaitForConditionStep(step_id, column, threshold, comparison))
-
-        elif step_type == "Set Setpoint":
-            device, ok = QtWidgets.QInputDialog.getText(
-                self,
-                "Set Setpoint",
-                "Device address:",
-            )
-            if not ok:
-                return
-
-            command, ok = QtWidgets.QInputDialog.getText(
-                self,
-                "Set Setpoint",
-                "SCPI command:",
-            )
-            if ok:
-                self.steps.append(SetSetpointStep(step_id, device, command))
-
-        elif step_type == "Stop Program":
-            self.steps.append(StopProgramStep(step_id))
-
-        self._refresh_step_list()
+        if step_instance is not None:
+            self.steps.append(step_instance)
+            self._refresh_step_list()
+            # Immediately send steps to manager
+            self.app_controller.set_experiment_steps(self.steps)
 
     def _remove_step(self) -> None:
         """Remove selected step from plan."""
@@ -249,6 +181,8 @@ class ExperimentDialog(QtWidgets.QDialog):
         if current_row >= 0:
             self.steps.pop(current_row)
             self._refresh_step_list()
+            # Immediately send steps to manager
+            self.app_controller.set_experiment_steps(self.steps)
 
     def _move_step_up(self) -> None:
         """Move selected step up in list."""
@@ -260,6 +194,8 @@ class ExperimentDialog(QtWidgets.QDialog):
             )
             self._refresh_step_list()
             self.step_list.setCurrentRow(current_row - 1)
+            # Immediately send steps to manager
+            self.app_controller.set_experiment_steps(self.steps)
 
     def _move_step_down(self) -> None:
         """Move selected step down in list."""
@@ -271,6 +207,8 @@ class ExperimentDialog(QtWidgets.QDialog):
             )
             self._refresh_step_list()
             self.step_list.setCurrentRow(current_row + 1)
+            # Immediately send steps to manager
+            self.app_controller.set_experiment_steps(self.steps)
 
     def _start_experiment(self) -> None:
         """Start experiment with current plan."""

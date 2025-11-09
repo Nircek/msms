@@ -201,7 +201,7 @@ class CsvPersistenceService:
         self,
         export_path: Path,
         columns: list[str] | None = None,
-        experiment_log: list[tuple[str, str, object]] | None = None,
+        experiment_log: list[tuple[str, str, datetime | None]] | None = None,
     ) -> None:
         """Export current CSV data to a user-provided path.
 

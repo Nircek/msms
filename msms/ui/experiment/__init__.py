@@ -1,19 +1,12 @@
 """Experiment orchestration components."""
 
+# Import steps to trigger registration
+import msms.ui.experiment.steps  # noqa: F401
+from msms.ui.experiment.register_step import register_step, step_registry
 from msms.ui.experiment.step_base import Step
-from msms.ui.experiment.steps import (
-    SetSetpointStep,
-    StopProgramStep,
-    WaitForConditionStep,
-    WaitForDatetimeStep,
-    WaitForDurationStep,
-)
 
 __all__ = [
-    "SetSetpointStep",
     "Step",
-    "StopProgramStep",
-    "WaitForConditionStep",
-    "WaitForDatetimeStep",
-    "WaitForDurationStep",
+    "register_step",
+    "step_registry",
 ]

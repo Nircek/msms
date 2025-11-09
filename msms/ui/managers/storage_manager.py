@@ -1,6 +1,5 @@
-from __future__ import annotations
-
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -9,10 +8,8 @@ from PyQt6 import QtCore
 from msms.ui.managers.csv_persistence_service import CsvPersistenceService, SessionSnapshot
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-if TYPE_CHECKING:
     from collections.abc import Mapping
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +124,7 @@ class StorageManager(QtCore.QObject):
         self.t0 = 0.0
         self.columns: list[str] = []
         self.number_columns: list[str] = []
-        self._experiment_log: list[tuple[str, str, object]] = []
+        self._experiment_log: list[tuple[str, str, datetime | None]] = []
 
     @QtCore.pyqtSlot()
     def on_session_start_request(self) -> None:
@@ -199,7 +196,7 @@ class StorageManager(QtCore.QObject):
         self.export_completed.emit(str(export_path))
 
     @QtCore.pyqtSlot(object)
-    def on_experiment_log_update(self, log: list[tuple[str, str, object]]) -> None:
+    def on_experiment_log_update(self, log: list[tuple[str, str, datetime | None]]) -> None:
         """Update cached experiment log for export.
 
         Args:

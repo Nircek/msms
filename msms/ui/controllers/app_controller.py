@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from PyQt6 import QtCore, QtWidgets
@@ -45,7 +46,6 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
         self.device_manager = DeviceManager(interval_ms=interval_ms)
         self.storage_manager = StorageManager()
         self.experiment_manager = ExperimentManager()
-        self.experiment_manager.setParent(self)
 
         self.device_manager_thread = QtCore.QThread()
         self.storage_manager_thread = QtCore.QThread()
@@ -90,6 +90,7 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
 
         self.storage_manager.new_data_row.connect(self.experiment_manager.on_data_update)
         self.experiment_manager.experiment_log_updated.connect(self.storage_manager.on_experiment_log_update)
+        self.experiment_manager.device_command_requested.connect(self.device_command_requested)
 
         self.storage_manager_thread.start()
         self.device_manager_thread.start()
@@ -150,6 +151,9 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
 
         logger.info("Stopping acquisition")
         self.device_acquisition_stop_requested.emit()
+        # Also stop experiment if running
+        if self.experiment_manager.is_running:
+            self.experiment_stop_requested.emit()
 
     def set_interval(self, interval_ms: int) -> None:
         """Change the acquisition interval.
@@ -253,6 +257,6 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
         """Check if experiment is running."""
         return self.experiment_manager.is_running
 
-    def get_experiment_log(self) -> list[tuple[str, str, object]]:
+    def get_experiment_log(self) -> list[tuple[str, str, datetime | None]]:
         """Get execution history with timestamps."""
         return self.experiment_manager.get_execution_log()
