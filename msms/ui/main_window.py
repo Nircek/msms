@@ -8,7 +8,8 @@ from msms.ui.controllers.app_controller import ApplicationController
 from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
 from msms.ui.controllers.experiment_controller import ExperimentController
 from msms.ui.controllers.plot_controller import PlotController
-from msms.ui.dialogs import DescriptionDialog, DeviceSelectionDialog, MarkdownViewerDialog
+from msms.ui.dialogs import DescriptionDialog, DeviceSelectionDialog, ExperimentDialog, MarkdownViewerDialog
+from msms.ui.experiment.step_base import Step
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +96,10 @@ class MainWindow(MainWindowUic):
         storage_manager.export_completed.connect(self._on_export_completed)
         storage_manager.export_failed.connect(self._on_export_failed)
 
+        experiment_manager = self.app_controller.experiment_manager
+        experiment_manager.current_step_changed.connect(self._on_experiment_step_changed)
+        experiment_manager.experiment_completed.connect(self._on_experiment_completed)
+
         pg.setConfigOptions(antialias=True)
         self.plot_controller = PlotController(self.plotWidget, self.autoFollowCheckBox)
         self.display_controller = DisplayController(
@@ -142,11 +147,8 @@ class MainWindow(MainWindowUic):
 
     def on_actionManageExperiment_triggered(self) -> None:
         """Show dialog for managing the experiment plan."""
-        QtWidgets.QMessageBox.information(
-            self,
-            "Manage Experiment",
-            "Experiment management functionality is not yet implemented.",
-        )
+        dialog = ExperimentDialog(self, app_controller=self.app_controller)
+        dialog.exec()
 
     def on_actionDescribe_triggered(self) -> None:
         """Show dialog for editing the experiment description."""
@@ -229,6 +231,47 @@ class MainWindow(MainWindowUic):
 
     def _on_export_failed(self, message: str) -> None:
         QtWidgets.QMessageBox.warning(self, "Export Failed", message)
+
+    def _on_experiment_step_changed(self, step: object) -> None:
+        """Update experiment plan display when current step changes."""
+        current_step = step if isinstance(step, Step) else None
+        next_step = self.app_controller.get_next_step()
+
+        current_text = current_step.label if current_step else "No active step"
+        next_text = next_step.label if next_step else "End of plan"
+
+        html = (
+            '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">'
+            '<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" />'
+            '<style type="text/css">p, li { white-space: pre-wrap; }'
+            "hr { height: 1px; border-width: 0; }"
+            'li.unchecked::marker { content: "\\2610"; }'
+            'li.checked::marker { content: "\\2612"; }'
+            '</style></head><body style=" font-family:\'.AppleSystemUIFont\'; font-size:13pt; '
+            'font-weight:400; font-style:normal;">'
+            '<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; '
+            f'-qt-block-indent:0; text-indent:0px;"><span style=" font-weight:700;">CURRENT: </span>{current_text}</p>'
+            '<p style=" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; '
+            f'-qt-block-indent:0; text-indent:0px;"><span style=" font-weight:700;">NEXT: '
+            f'</span>{next_text}</p>'
+            "</body></html>"
+        )
+
+        self.experimentPlanTextEdit.setHtml(html)
+
+    def _on_experiment_completed(self) -> None:
+        """Handle experiment completion."""
+        logger.info("Experiment completed")
+        self.experimentPlanTextEdit.setHtml(
+            '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0//EN" "http://www.w3.org/TR/REC-html40/strict.dtd">'
+            '<html><head><meta name="qrichtext" content="1" /><meta charset="utf-8" />'
+            '<style type="text/css">p, li { white-space: pre-wrap; }hr { height: 1px; border-width: 0; }'
+            'li.unchecked::marker { content: "\\2610"; }li.checked::marker { content: "\\2612"; }'
+            '</style></head><body style=" font-family:\'.AppleSystemUIFont\'; font-size:13pt; '
+            'font-weight:400; font-style:normal;"><p style=" margin-top:0px; margin-bottom:0px; '
+            'margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'
+            '<span style=" font-weight:700;">EXPERIMENT COMPLETED</span></p></body></html>'
+        )
 
     def closeEvent(self, event: QtGui.QCloseEvent | None) -> None:
         """Ensure worker threads are stopped before window closes."""

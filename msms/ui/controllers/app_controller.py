@@ -89,6 +89,7 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
         self.experiment_remove_step_requested.connect(self.experiment_manager.on_remove_step)
 
         self.storage_manager.new_data_row.connect(self.experiment_manager.on_data_update)
+        self.experiment_manager.experiment_log_updated.connect(self.storage_manager.on_experiment_log_update)
 
         self.storage_manager_thread.start()
         self.device_manager_thread.start()
@@ -254,7 +255,4 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
 
     def get_experiment_log(self) -> list[tuple[str, str, object]]:
         """Get execution history with timestamps."""
-        from datetime import datetime
-
-        log = self.experiment_manager.get_execution_log()
-        return [(sid, label, timestamp) for sid, label, timestamp in log]
+        return self.experiment_manager.get_execution_log()

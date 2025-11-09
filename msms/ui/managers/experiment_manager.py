@@ -26,6 +26,7 @@ class ExperimentManager(QtCore.QObject):
     experiment_completed = QtCore.pyqtSignal()
     experiment_started = QtCore.pyqtSignal()
     experiment_stopped = QtCore.pyqtSignal()
+    experiment_log_updated = QtCore.pyqtSignal(object)
 
     def __init__(self) -> None:
         """Initialize experiment manager with empty plan."""
@@ -205,6 +206,7 @@ class ExperimentManager(QtCore.QObject):
             logger.exception("Error in on_start for step: %s", current.label)
 
         self.current_step_changed.emit(current)
+        self.experiment_log_updated.emit(self.get_execution_log())
 
     def _evaluate_step(self) -> None:
         """Check if current step is complete and advance if needed."""

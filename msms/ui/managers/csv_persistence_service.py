@@ -1,6 +1,7 @@
 import csv
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -196,8 +197,19 @@ class CsvPersistenceService:
             row_count=row_count,
         )
 
-    def export_to_csv(self, export_path: Path, columns: list[str] | None = None) -> None:
-        """Export current CSV data to a user-provided path."""
+    def export_to_csv(
+        self,
+        export_path: Path,
+        columns: list[str] | None = None,
+        experiment_log: list[tuple[str, str, object]] | None = None,
+    ) -> None:
+        """Export current CSV data to a user-provided path.
+
+        Args:
+            export_path: Destination path for export.
+            columns: Optional column filter.
+            experiment_log: Optional experiment log entries (step_id, label, timestamp).
+        """
         if self.csv_file is not None:
             self.csv_file.flush()
 
@@ -212,7 +224,20 @@ class CsvPersistenceService:
             reader = csv.DictReader(infile)
             if columns is None:
                 columns = list(reader.fieldnames or [])
+
+            # Write description
             outfile.write("\n".join(f"# {line}" for line in self.description.splitlines()) + "\n")
+
+            # Write experiment log if provided
+            if experiment_log:
+                outfile.write("#\n# Experiment Log:\n")
+                for step_id, label, timestamp in experiment_log:
+                    if timestamp is not None:
+                        ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+                        outfile.write(f"# {step_id}: {label} (started: {ts_str})\n")
+                    else:
+                        outfile.write(f"# {step_id}: {label} (not started)\n")
+
             writer = csv.DictWriter(outfile, fieldnames=columns)
 
             writer.writeheader()
