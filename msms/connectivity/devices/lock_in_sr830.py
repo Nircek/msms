@@ -22,7 +22,7 @@ class LockInSr830(DeviceBase):
         return vendor == "Stanford_Research_Systems" and model == "SR830"
 
     def initialize(self) -> None:
-        self.command_resource("*RST")
+        # self.command_resource("*RST") # we should not reset the user settings
 
         cmds = [
             "PHAS?",  # query phase shift -180.0..180.0
