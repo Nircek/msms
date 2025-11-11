@@ -126,6 +126,12 @@ class StorageManager(QtCore.QObject):
         self._experiment_log: list[tuple[str, str, datetime | None]] = []
 
     @QtCore.pyqtSlot()
+    def on_setup(self) -> None:
+        """Initialize storage manager in thread context."""
+        self.on_session_start_request()
+        QtCore.QCoreApplication.processEvents()
+
+    @QtCore.pyqtSlot()
     def on_session_start_request(self) -> None:
         """Start new acquisition session."""
         if self.csv_persistence.is_active:

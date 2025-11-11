@@ -11,6 +11,7 @@ from msms.ui.experiment.register_step import register_step
 from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
+    from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager
 
 logger = logging.getLogger(__name__)
@@ -33,7 +34,7 @@ class WaitForDatetimeStep(Step):
         """Get human-readable label."""
         return f"Wait until {self.target_datetime.isoformat()}"
 
-    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, _app_controller: object) -> bool:
+    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, _app_controller: ApplicationController) -> bool:
         """Open dialog to edit step parameters.
 
         Args:

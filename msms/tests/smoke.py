@@ -15,6 +15,24 @@ _EXPORT_MISSING_REASON = "expected export file missing"
 _EXPORT_EMPTY_REASON = "export file is empty"
 
 
+class TestSignals(QtCore.QObject):
+    """Test-specific signals for smoke test operations.
+
+    These signals are connected to managers during test setup
+    to enable programmatic control of the application.
+    """
+
+    # Device signals
+    device_discovery_start_requested = QtCore.pyqtSignal(object)
+    device_discovery_stop_requested = QtCore.pyqtSignal()
+    device_selection_requested = QtCore.pyqtSignal(object)
+    device_acquisition_start_requested = QtCore.pyqtSignal()
+    device_acquisition_stop_requested = QtCore.pyqtSignal()
+
+    # Storage signals
+    storage_export_requested = QtCore.pyqtSignal(object)
+
+
 class SmokeTestError(RuntimeError):
     """Raised when the smoke test expectations are not met."""
 
@@ -53,6 +71,23 @@ def main() -> int:
     app, owns_app = _ensure_application()
     window = MainWindow()
 
+    # Create test signals and connect them to managers
+    test_signals = TestSignals()
+    test_signals.device_discovery_start_requested.connect(
+        window.app_controller.managers.device.on_discovery_start_request
+    )
+    test_signals.device_discovery_stop_requested.connect(
+        window.app_controller.managers.device.on_discovery_stop_request
+    )
+    test_signals.device_selection_requested.connect(window.app_controller.managers.device.on_device_select_request)
+    test_signals.device_acquisition_start_requested.connect(
+        window.app_controller.managers.device.on_acquisition_start_request
+    )
+    test_signals.device_acquisition_stop_requested.connect(
+        window.app_controller.managers.device.on_acquisition_stop_request
+    )
+    test_signals.storage_export_requested.connect(window.app_controller.managers.storage.on_export_request)
+
     try:
         window.show()
         app.processEvents()
@@ -63,30 +98,30 @@ def main() -> int:
             discovered_devices.clear()
             discovered_devices.extend(devices)
 
-        window.app_controller.devices_discovered.connect(capture_devices)
+        window.app_controller.managers.device.devices_discovered.connect(capture_devices)
 
         # Start device discovery and wait for devices to be discovered
-        window.app_controller.start_discovery(interval_ms=500)
+        test_signals.device_discovery_start_requested.emit(500)
         _process_events(app, 2.0)  # Allow time for device discovery to complete
 
         # Stop discovery once we have devices
-        window.app_controller.stop_discovery()
+        test_signals.device_discovery_stop_requested.emit()
 
         if not discovered_devices:
             raise SmokeTestError(_NO_DEVICES_REASON)
 
         addresses = [device.address for device in discovered_devices]
-        window.app_controller.update_selected_devices(addresses)
-        window.app_controller.start_acquisition()
+        test_signals.device_selection_requested.emit(addresses)
+        test_signals.device_acquisition_start_requested.emit()
 
         _process_events(app, 5.0)
 
-        window.app_controller.stop_acquisition()
+        test_signals.device_acquisition_stop_requested.emit()
         app.processEvents()
 
         export_dir = Path(tempfile.mkdtemp(prefix="msms_smoke_"))
         export_path = export_dir / "acquisition.csv"
-        window.app_controller.request_export_to_csv(export_path)
+        test_signals.storage_export_requested.emit((export_path, None))
         _process_events(app, 0.5)  # Allow time for export signal to complete
 
         if not export_path.exists():

@@ -138,7 +138,7 @@ class PlotController(QtCore.QObject):
     @QtCore.pyqtSlot(Qt.ColorScheme)
     def _on_theme_changed(self, color_scheme: Qt.ColorScheme) -> None:
         """Handle OS theme change and update plot styling."""
-        is_dark = color_scheme == Qt.ColorScheme.Dark  # type: ignore[comparison-overlap]
+        is_dark = color_scheme == Qt.ColorScheme.Dark
         logger.info("OS theme changed, dark mode: %s", is_dark)
 
         # Update plot styling

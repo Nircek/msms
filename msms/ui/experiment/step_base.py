@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
     from PyQt6 import QtWidgets
 
+    from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager
 
 
@@ -45,7 +46,7 @@ class Step(ABC):
         return self.get_label()
 
     @abstractmethod
-    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: object) -> bool:
+    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: ApplicationController) -> bool:
         """Open dialog to edit step parameters.
 
         Args:

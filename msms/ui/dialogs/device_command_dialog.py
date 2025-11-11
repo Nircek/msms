@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 class DeviceCommandDialog(QtWidgets.QDialog):
     """Dialog for selecting a device and sending commands to it."""
 
+    # Device command signals
+    device_info_requested = QtCore.pyqtSignal()
+    device_command_requested = QtCore.pyqtSignal(object, object)
+
     def __init__(self, parent: QtWidgets.QWidget, app_controller: ApplicationController) -> None:
         """Initialize the device command dialog.
 
@@ -53,8 +57,10 @@ class DeviceCommandDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-        self.app_controller.device_info_collected.connect(self._on_device_info_received)
-        self.app_controller.request_device_info()
+        self.device_info_requested.connect(self.app_controller.managers.device.on_device_info_request)
+        self.device_command_requested.connect(self.app_controller.managers.device.on_device_command_request)
+        self.app_controller.managers.device.device_info_collected.connect(self._on_device_info_received)
+        self.device_info_requested.emit()
 
     @QtCore.pyqtSlot(object)
     def _on_device_info_received(self, device_info: dict[str, DiscoveredDevice]) -> None:
@@ -73,7 +79,7 @@ class DeviceCommandDialog(QtWidgets.QDialog):
             self.device_combo.setEnabled(False)
 
         # Disconnect signal to avoid multiple connections
-        self.app_controller.device_info_collected.disconnect(self._on_device_info_received)
+        self.app_controller.managers.device.device_info_collected.disconnect(self._on_device_info_received)
 
     def _send_command(self) -> None:
         """Send the command to the selected device."""
@@ -88,7 +94,7 @@ class DeviceCommandDialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, "No Command", "Please enter a command to send.")
             return
 
-        self.app_controller.send_device_command(device_address, command)
+        self.device_command_requested.emit(device_address, command)
 
         QtWidgets.QMessageBox.information(
             self,

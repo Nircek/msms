@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 class DeviceSelectionDialog(QtWidgets.QDialog):
     """Dialog for discovering and selecting devices to poll."""
 
+    # Device discovery signals
+    device_discovery_start_requested = QtCore.pyqtSignal(object)
+    device_discovery_stop_requested = QtCore.pyqtSignal()
+
     def __init__(self, parent: QtWidgets.QWidget, app_controller: ApplicationController) -> None:
         super().__init__(parent)
         self.setWindowTitle("Select Devices")
@@ -26,9 +30,11 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
 
         self._setup_ui()
 
-        self._app_controller.devices_discovered.connect(self._on_devices_discovered)
-        self._app_controller.start_discovery(interval_ms=2000)
-        self.finished.connect(lambda *_: self._app_controller.stop_discovery())
+        self.device_discovery_start_requested.connect(self._app_controller.managers.device.on_discovery_start_request)
+        self.device_discovery_stop_requested.connect(self._app_controller.managers.device.on_discovery_stop_request)
+        self._app_controller.managers.device.devices_discovered.connect(self._on_devices_discovered)
+        self.device_discovery_start_requested.emit(2000)
+        self.finished.connect(lambda *_: self.device_discovery_stop_requested.emit())
 
     def _setup_ui(self) -> None:
         """Create dialog UI with device table and buttons."""

@@ -39,6 +39,11 @@ class ExperimentManager(QtCore.QObject):
         self._step_id_counter = 0
         self._step_id_mutex = QtCore.QMutex()
 
+    @QtCore.pyqtSlot()
+    def on_setup(self) -> None:  # noqa: PLR6301
+        """Initialize experiment manager in thread context."""
+        QtCore.QCoreApplication.processEvents()
+
     def threaded_new_step_id(self) -> int:
         """Generate unique step ID in thread-safe manner.
 
@@ -180,6 +185,7 @@ class ExperimentManager(QtCore.QObject):
         if self._is_running:
             self._evaluate_step()
 
+    @QtCore.pyqtSlot()
     def _start_current_step(self) -> None:
         """Initialize current step and record start timestamp."""
         current = self.current_step
@@ -223,6 +229,7 @@ class ExperimentManager(QtCore.QObject):
 
             self._advance_to_next_step()
 
+    @QtCore.pyqtSlot()
     def _advance_to_next_step(self) -> None:
         """Move to next step in experiment plan."""
         self._current_index += 1
@@ -232,6 +239,7 @@ class ExperimentManager(QtCore.QObject):
         else:
             self._start_current_step()
 
+    @QtCore.pyqtSlot()
     def _complete_experiment(self) -> None:
         """Finalize experiment execution."""
         self._is_running = False

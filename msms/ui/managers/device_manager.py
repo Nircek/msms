@@ -54,7 +54,9 @@ class DeviceManager(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def on_setup(self) -> None:
+        """Initialize device manager in thread context."""
         self.initialize_visa()
+        QtCore.QCoreApplication.processEvents()
 
     @QtCore.pyqtSlot()
     def on_acquisition_start_request(self) -> None:
@@ -64,12 +66,6 @@ class DeviceManager(QtCore.QObject):
 
         if not self._selected_addresses:
             logger.error("No device addresses configured; cannot start acquisition.")
-            return
-
-        try:
-            self.initialize_visa()
-        except Exception:
-            logger.exception("Unable to initialise VISA before acquisition")
             return
 
         if self._timer is None:
@@ -129,6 +125,7 @@ class DeviceManager(QtCore.QObject):
         self._repository.set_selected_addresses(addresses)
         if self._is_running:
             logger.warning("Device selection changed during acquisition; restart required")
+        self.on_device_info_request()  # Update device info after selection change
 
     @QtCore.pyqtSlot()
     def on_device_info_request(self) -> None:
@@ -156,12 +153,6 @@ class DeviceManager(QtCore.QObject):
     def on_discovery_start_request(self, interval_ms: int) -> None:
         """Start periodic device discovery polling."""
         if self._discovery_timer is not None and self._discovery_timer.isActive():
-            return
-
-        try:
-            self.initialize_visa()
-        except Exception:
-            logger.exception("Unable to initialize VISA before discovery")
             return
 
         if self._discovery_timer is None:

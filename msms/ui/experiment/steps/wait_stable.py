@@ -7,12 +7,12 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PyQt6 import QtWidgets
 
-from msms.ui.controllers.app_controller import ApplicationController
 from msms.ui.dialogs.step_config_dialogs import WaitForStableDialog
 from msms.ui.experiment.register_step import register_step
 from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
+    from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager
 
 logger = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class WaitForStableStep(Step):
         """Get human-readable label."""
         return f"Wait for {self.column_name} stable (|slope| <= {self.max_slope})"
 
-    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: object) -> bool:
+    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: ApplicationController) -> bool:
         """Open dialog to edit step parameters.
 
         Args:
@@ -52,10 +52,8 @@ class WaitForStableStep(Step):
             True if parameters were modified, False if cancelled.
         """
         # Get available column names from app_controller
-        column_names = None
-        if isinstance(app_controller, ApplicationController):
-            columns = app_controller.data_repository.columns
-            column_names = list(columns) if columns else None
+        columns = app_controller.data_repository.columns
+        column_names = list(columns) if columns else None
 
         dialog = WaitForStableDialog(parent, column_names=column_names)
         dialog.set_column_name(self.column_name)

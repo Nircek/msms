@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 class ExperimentDialog(QtWidgets.QDialog):
     """Dialog for creating and editing experiment plans."""
 
+    # Experiment management signals
+    experiment_get_steps_requested = QtCore.pyqtSignal()
+    experiment_set_steps_requested = QtCore.pyqtSignal(object)
+
     def __init__(
         self,
         parent: QtWidgets.QWidget | None,
@@ -38,11 +42,14 @@ class ExperimentDialog(QtWidgets.QDialog):
         self._setup_ui()
 
         # Connect to signals before requesting data
-        self.app_controller.experiment_steps_changed.connect(self._on_steps_changed)
-        self.app_controller.experiment_current_step_changed.connect(self._on_current_step_changed)
+
+        self.experiment_get_steps_requested.connect(self.app_controller.managers.experiment.on_get_steps_request)
+        self.experiment_set_steps_requested.connect(self.app_controller.managers.experiment.on_set_steps)
+        self.app_controller.managers.experiment.steps_changed.connect(self._on_steps_changed)
+        self.app_controller.managers.experiment.current_step_changed.connect(self._on_current_step_changed)
 
         # Request current steps
-        self.app_controller.request_experiment_steps()
+        self.experiment_get_steps_requested.emit()
 
     def _setup_ui(self) -> None:
         """Create dialog UI elements."""
@@ -80,27 +87,6 @@ class ExperimentDialog(QtWidgets.QDialog):
 
         layout.addLayout(button_layout)
 
-        # Control buttons
-        control_layout = QtWidgets.QHBoxLayout()
-
-        start_button = QtWidgets.QPushButton("Start Experiment")
-        start_button.clicked.connect(self._start_experiment)
-        control_layout.addWidget(start_button)
-
-        stop_button = QtWidgets.QPushButton("Stop Experiment")
-        stop_button.clicked.connect(self._stop_experiment)
-        control_layout.addWidget(stop_button)
-
-        skip_button = QtWidgets.QPushButton("Skip to Next")
-        skip_button.clicked.connect(self._skip_forward)
-        control_layout.addWidget(skip_button)
-
-        layout.addLayout(control_layout)
-
-        # Status label
-        self.status_label = QtWidgets.QLabel()
-        layout.addWidget(self.status_label)
-
         # Dialog buttons
         button_box = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
@@ -108,8 +94,6 @@ class ExperimentDialog(QtWidgets.QDialog):
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
-
-        self._update_status()
 
     @QtCore.pyqtSlot(object)
     def _on_steps_changed(self, steps: list[Step]) -> None:
@@ -128,7 +112,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         Args:
             _current_step: Currently executing step or None.
         """
-        self._update_status()
+        self._refresh_step_list()
 
     def _refresh_step_list(self) -> None:
         """Update step list display."""
@@ -138,18 +122,6 @@ class ExperimentDialog(QtWidgets.QDialog):
             if step.start_timestamp is not None:
                 status = f" [Started: {step.start_timestamp.strftime('%H:%M:%S')}]"
             self.step_list.addItem(f"{i + 1}. {step.label}{status}")
-
-    def _update_status(self) -> None:
-        """Update status label with current experiment state."""
-        is_running = self.app_controller.is_experiment_running()
-        current_step = self.app_controller.get_current_step()
-
-        if is_running and current_step:
-            self.status_label.setText(f"Running: {current_step.label}")
-        elif is_running:
-            self.status_label.setText("Running")
-        else:
-            self.status_label.setText("Not running")
 
     def _add_step(self) -> None:
         """Show dialog to add a new step."""
@@ -204,7 +176,7 @@ class ExperimentDialog(QtWidgets.QDialog):
             return
 
         # Generate unique step ID using thread-safe counter
-        step_id = f"step_{self.app_controller.generate_step_id()}"
+        step_id = f"step_{self.app_controller.managers.experiment.threaded_new_step_id()}"
 
         # Create step instance with default parameters
         step_instance = step_class(step_id)
@@ -213,7 +185,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         if step_instance.exec_edit_dialog(self, self.app_controller):
             # Request manager to add the step
             updated_steps = [*self.steps, step_instance]
-            self.app_controller.set_experiment_steps(updated_steps)
+            self.experiment_set_steps_requested.emit(updated_steps)
 
     def _edit_step(self) -> None:
         """Edit selected step parameters."""
@@ -224,7 +196,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         step = self.steps[current_row]
         if step.exec_edit_dialog(self, self.app_controller):
             # Request manager to update the steps (to trigger refresh)
-            self.app_controller.set_experiment_steps(list(self.steps))
+            self.experiment_set_steps_requested.emit(list(self.steps))
 
     def _remove_step(self) -> None:
         """Remove selected step from plan."""
@@ -232,7 +204,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         if current_row >= 0:
             # Request manager to remove the step
             updated_steps = [step for i, step in enumerate(self.steps) if i != current_row]
-            self.app_controller.set_experiment_steps(updated_steps)
+            self.experiment_set_steps_requested.emit(updated_steps)
 
     def _move_step_up(self) -> None:
         """Move selected step up in list."""
@@ -244,7 +216,7 @@ class ExperimentDialog(QtWidgets.QDialog):
                 updated_steps[current_row - 1],
                 updated_steps[current_row],
             )
-            self.app_controller.set_experiment_steps(updated_steps)
+            self.experiment_set_steps_requested.emit(updated_steps)
             # Update selection after refresh
             self.step_list.setCurrentRow(current_row - 1)
 
@@ -258,32 +230,9 @@ class ExperimentDialog(QtWidgets.QDialog):
                 updated_steps[current_row + 1],
                 updated_steps[current_row],
             )
-            self.app_controller.set_experiment_steps(updated_steps)
+            self.experiment_set_steps_requested.emit(updated_steps)
             # Update selection after refresh
             self.step_list.setCurrentRow(current_row + 1)
-
-    def _start_experiment(self) -> None:
-        """Start experiment with current plan."""
-        if not self.steps:
-            QtWidgets.QMessageBox.warning(self, "No Steps", "Add steps before starting experiment.")
-            return
-
-        self.app_controller.set_experiment_steps(self.steps)
-        self.app_controller.start_experiment()
-        self._update_status()
-        logger.info("Experiment started with %d steps", len(self.steps))
-
-    def _stop_experiment(self) -> None:
-        """Stop running experiment."""
-        self.app_controller.stop_experiment()
-        self._update_status()
-        logger.info("Experiment stopped")
-
-    def _skip_forward(self) -> None:
-        """Skip to next step in experiment."""
-        self.app_controller.skip_experiment_forward()
-        self._update_status()
-        logger.info("Skipped to next step")
 
     def get_steps(self) -> list[Step]:
         """Get configured experiment steps."""

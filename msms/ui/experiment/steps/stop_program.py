@@ -9,6 +9,7 @@ from msms.ui.experiment.step_base import Step
 if TYPE_CHECKING:
     from PyQt6 import QtWidgets
 
+    from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager
 
 logger = logging.getLogger(__name__)
@@ -30,7 +31,7 @@ class StopProgramStep(Step):
         """Get human-readable label."""
         return "Stop program"
 
-    def exec_edit_dialog(self, _parent: QtWidgets.QWidget | None, _app_controller: object) -> bool:  # noqa: PLR6301
+    def exec_edit_dialog(self, _parent: QtWidgets.QWidget | None, _app_controller: ApplicationController) -> bool:  # noqa: PLR6301
         """No configuration needed for stop step."""
         return True
 

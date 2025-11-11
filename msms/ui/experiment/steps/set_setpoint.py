@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING
 
 from PyQt6 import QtWidgets
 
-from msms.ui.controllers.app_controller import ApplicationController
 from msms.ui.dialogs.step_config_dialogs import SetSetpointDialog
 from msms.ui.experiment.register_step import register_step
 from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
+    from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class SetSetpointStep(Step):
             return f"Set {self.device_address}: SETP {self.setpoint_value}"
         return "Set Setpoint (not configured)"
 
-    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: object) -> bool:
+    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: ApplicationController) -> bool:
         """Open dialog to edit step parameters.
 
         Args:
@@ -46,17 +46,14 @@ class SetSetpointStep(Step):
         Returns:
             True if parameters were modified, False if cancelled.
         """
-        # Get device info from app_controller using the same pattern as DeviceCommandDialog
+        # Get device info from cached device info in app controller
         device_info_map: dict[str, tuple[str, str]] = {}
-        if isinstance(app_controller, ApplicationController):
-            # Get device info directly from device manager
-            app_controller.device_manager._repository.initialize_visa()  # noqa: SLF001
-            raw_device_info = app_controller.device_manager._repository.get_devices_info()  # noqa: SLF001
 
-            for address, info in raw_device_info.items():
-                device_name = info.device_name or "Unknown"
-                display_text = f"{device_name} ({address})"
-                device_info_map[address] = (device_name, display_text)
+        # Build device info map from cached device info
+        for address, info in app_controller.device_info_cache.items():
+            device_name = info.device_name or "Unknown"
+            display_text = f"{device_name} ({address})"
+            device_info_map[address] = (device_name, display_text)
 
         dialog = SetSetpointDialog(parent, device_info=device_info_map)
         dialog.set_device_address(self.device_address)

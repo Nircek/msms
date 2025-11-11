@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from PyQt6 import QtCore, QtWidgets
@@ -6,182 +7,160 @@ from PyQt6 import QtCore, QtWidgets
 from msms.ui.managers import DeviceManager, ExperimentManager, StorageManager
 
 if TYPE_CHECKING:
-    from datetime import datetime
-    from pathlib import Path
-
-    from msms.ui.experiment.step_base import Step
+    from msms.connectivity.device_repository import DiscoveredDevice
+    from msms.ui.main_window import MainWindow
     from msms.ui.managers.storage_manager import DataRepository
+
 
 logger = logging.getLogger(__name__)
 
 
-class ApplicationController(QtCore.QObject):  # noqa: PLR0904
-    device_acquisition_start_requested = QtCore.pyqtSignal()
-    device_acquisition_stop_requested = QtCore.pyqtSignal()
-    device_selection_requested = QtCore.pyqtSignal(object)
-    device_discovery_start_requested = QtCore.pyqtSignal(object)
-    device_discovery_stop_requested = QtCore.pyqtSignal()
-    device_interval_change_requested = QtCore.pyqtSignal(object)
-    device_shutdown_requested = QtCore.pyqtSignal()
-    device_info_requested = QtCore.pyqtSignal()
-    device_command_requested = QtCore.pyqtSignal(object, object)
-    device_info_collected = QtCore.pyqtSignal(object)
-    devices_discovered = QtCore.pyqtSignal(object)
+@dataclass
+class AppManagers:
+    """Container for all application managers.
 
-    storage_restore_requested = QtCore.pyqtSignal(object)
-    storage_export_requested = QtCore.pyqtSignal(object)
-    storage_description_change_requested = QtCore.pyqtSignal(object)
-    storage_session_start_requested = QtCore.pyqtSignal()
-    storage_stop_requested = QtCore.pyqtSignal()
+    Provides structured access to device, storage, and experiment managers.
+    """
 
-    experiment_start_requested = QtCore.pyqtSignal()
-    experiment_stop_requested = QtCore.pyqtSignal()
-    experiment_skip_forward_requested = QtCore.pyqtSignal()
-    experiment_set_steps_requested = QtCore.pyqtSignal(object)
-    experiment_get_steps_requested = QtCore.pyqtSignal()
+    device: DeviceManager
+    storage: StorageManager
+    experiment: ExperimentManager
 
-    experiment_steps_changed = QtCore.pyqtSignal(object)
-    experiment_current_step_changed = QtCore.pyqtSignal(object)
+
+class ApplicationController(QtCore.QObject):
+    """Coordinates threads and connects signals between components and managers.
+
+    This controller's sole responsibility is thread management and signal routing.
+    It does NOT own any signals itself - it connects signals from UI components
+    (MainWindow, dialogs, controllers) to manager slots.
+    """
 
     def __init__(self, interval_ms: int = 500) -> None:
         super().__init__()
 
         self.current_interval_ms = interval_ms
 
-        self.device_manager = DeviceManager(interval_ms=interval_ms)
-        self.storage_manager = StorageManager()
-        self.experiment_manager = ExperimentManager()
+        # Create managers
+        device_manager = DeviceManager(interval_ms=interval_ms)
+        storage_manager = StorageManager()
+        experiment_manager = ExperimentManager()
 
+        self.managers = AppManagers(
+            device=device_manager,
+            storage=storage_manager,
+            experiment=experiment_manager,
+        )
+
+        # Create threads
         self.device_manager_thread = QtCore.QThread()
         self.storage_manager_thread = QtCore.QThread()
         self.experiment_manager_thread = QtCore.QThread()
-        self.device_manager.moveToThread(self.device_manager_thread)
-        self.storage_manager.moveToThread(self.storage_manager_thread)
-        self.experiment_manager.moveToThread(self.experiment_manager_thread)
 
-        self.storage_manager_thread.started.connect(self.storage_manager.on_session_start_request)
-        self.device_manager_thread.started.connect(self.device_manager.on_setup)
+        # Move managers to threads
+        self.managers.device.moveToThread(self.device_manager_thread)
+        self.managers.storage.moveToThread(self.storage_manager_thread)
+        self.managers.experiment.moveToThread(self.experiment_manager_thread)
 
-        self.device_acquisition_start_requested.connect(self.device_manager.on_acquisition_start_request)
-        self.device_acquisition_stop_requested.connect(self.device_manager.on_acquisition_stop_request)
-        self.device_selection_requested.connect(self.device_manager.on_device_select_request)
-        self.device_discovery_start_requested.connect(self.device_manager.on_discovery_start_request)
-        self.device_discovery_stop_requested.connect(self.device_manager.on_discovery_stop_request)
-        self.device_interval_change_requested.connect(self.device_manager.on_interval_change_request)
-        self.device_shutdown_requested.connect(self.device_manager.on_shutdown)
-        self.device_info_requested.connect(self.device_manager.on_device_info_request)
-        self.device_command_requested.connect(self.device_manager.on_device_command_request)
+        # Connect thread started signals to on_setup methods
+        self.device_manager_thread.started.connect(self.managers.device.on_setup)
+        self.storage_manager_thread.started.connect(self.managers.storage.on_setup)
+        self.experiment_manager_thread.started.connect(self.managers.experiment.on_setup)
 
-        self.device_manager.devices_discovered.connect(self.devices_discovered)
-        self.device_manager.device_info_collected.connect(self.device_info_collected)
-        self.device_manager.acquisition_state_changed.connect(self._on_acquisition_state_changed)
+        # Connect manager-to-manager signals
+        self._connect_device_to_storage()
+        self._connect_storage_to_experiment()
+        self._connect_experiment_to_device()
 
-        self.storage_restore_requested.connect(self.storage_manager.on_session_restore_request)
-        self.storage_export_requested.connect(self.storage_manager.on_export_request)
-        self.storage_description_change_requested.connect(self.storage_manager.on_description_change_request)
-        self.storage_stop_requested.connect(self.storage_manager.on_stop_request)
-        self.storage_session_start_requested.connect(self.storage_manager.on_session_start_request)
-
-        self.device_manager.data_initialized.connect(self.storage_manager.on_header_set_request)
-        self.device_manager.data_collected.connect(self.storage_manager.on_data_append_request)
-
-        self.experiment_start_requested.connect(self.experiment_manager.on_start_request)
-        self.experiment_stop_requested.connect(self.experiment_manager.on_stop_request)
-        self.experiment_skip_forward_requested.connect(self.experiment_manager.on_skip_forward_request)
-        self.experiment_set_steps_requested.connect(self.experiment_manager.on_set_steps)
-        self.experiment_get_steps_requested.connect(self.experiment_manager.on_get_steps_request)
-
-        self.storage_manager.new_data_row.connect(self.experiment_manager.on_data_update)
-        self.experiment_manager.experiment_log_updated.connect(self.storage_manager.on_experiment_log_update)
-        self.experiment_manager.device_command_requested.connect(self.device_command_requested)
-        self.experiment_manager.steps_changed.connect(self.experiment_steps_changed)
-        self.experiment_manager.current_step_changed.connect(self.experiment_current_step_changed)
-
+        # Start threads
         self.storage_manager_thread.start()
         self.device_manager_thread.start()
         self.experiment_manager_thread.start()
 
-        self._selected_device_addresses: list[str] = []
         self._is_device_running = False
+        self.managers.device.acquisition_state_changed.connect(self._on_acquisition_state_changed)
+
+        self._device_info_cache: dict[str, DiscoveredDevice] = {}
+        self.managers.device.device_info_collected.connect(self._on_device_info_collected)
+
+    def connect_main_window_signals(self, main_window: MainWindow) -> None:
+        """Connect MainWindow signals to manager slots.
+
+        Args:
+            main_window: MainWindow instance with signals to connect.
+        """
+        # Device signals
+        main_window.device_acquisition_start_requested.connect(self.managers.device.on_acquisition_start_request)
+        main_window.device_acquisition_stop_requested.connect(self.managers.device.on_acquisition_stop_request)
+        main_window.device_selection_requested.connect(self.managers.device.on_device_select_request)
+        main_window.device_interval_change_requested.connect(self.managers.device.on_interval_change_request)
+
+        # Storage signals
+        main_window.storage_restore_requested.connect(self.managers.storage.on_session_restore_request)
+        main_window.storage_export_requested.connect(self.managers.storage.on_export_request)
+        main_window.storage_description_change_requested.connect(self.managers.storage.on_description_change_request)
+        main_window.storage_stop_requested.connect(self.managers.storage.on_stop_request)
+        main_window.storage_session_start_requested.connect(self.managers.storage.on_session_start_request)
+
+        # Experiment signals
+        main_window.experiment_start_requested.connect(self.managers.experiment.on_start_request)
+        main_window.experiment_stop_requested.connect(self.managers.experiment.on_stop_request)
+        main_window.experiment_skip_forward_requested.connect(self.managers.experiment.on_skip_forward_request)
+
+    def _connect_device_to_storage(self) -> None:
+        """Connect device manager signals to storage manager slots."""
+        self.managers.device.data_initialized.connect(self.managers.storage.on_header_set_request)
+        self.managers.device.data_collected.connect(self.managers.storage.on_data_append_request)
+
+    def _connect_storage_to_experiment(self) -> None:
+        """Connect storage manager signals to experiment manager slots."""
+        self.managers.storage.new_data_row.connect(self.managers.experiment.on_data_update)
+
+    def _connect_experiment_to_device(self) -> None:
+        """Connect experiment manager signals to device manager slots."""
+        self.managers.experiment.experiment_log_updated.connect(self.managers.storage.on_experiment_log_update)
+        self.managers.experiment.device_command_requested.connect(self.managers.device.on_device_command_request)
 
     @property
     def is_acquiring(self) -> bool:
+        """Check if device acquisition is currently running."""
         return self._is_device_running
 
     @property
     def data_repository(self) -> DataRepository:
         """Provide controlled read access to storage manager's data repository."""
-        return self.storage_manager._data_repository  # noqa: SLF001
+        return self.managers.storage._data_repository  # noqa: SLF001
 
-    def get_last_used_file(self) -> Path | None:
-        """Get the path to the last used session file.
+    @property
+    def device_info_cache(self) -> dict[str, DiscoveredDevice]:
+        """Provide read access to cached device info."""
+        return self._device_info_cache
 
-        Returns:
-            Path to last session file, or None if no session exists.
-        """
-        return self.storage_manager.get_last_used_file()
+    @QtCore.pyqtSlot(object)
+    def _on_acquisition_state_changed(self, running: bool) -> None:
+        """Track device acquisition state for shutdown logic."""
+        self._is_device_running = running
 
-    def start_discovery(self, interval_ms: int = 2000) -> None:
-        """Start periodic device discovery polling.
-
-        Args:
-            interval_ms: Discovery polling interval in milliseconds.
-        """
-        self.device_discovery_start_requested.emit(interval_ms)
-
-    def stop_discovery(self) -> None:
-        """Stop periodic device discovery polling."""
-        self.device_discovery_stop_requested.emit()
-
-    def start_acquisition(self) -> None:
-        """Start device acquisition."""
-        if self.is_acquiring:
-            return
-
-        if not self._selected_device_addresses:
-            logger.warning("Cannot start acquisition without selected devices")
-            return
-
-        logger.info("Starting acquisition")
-        self.device_interval_change_requested.emit(self.current_interval_ms)
-        # self.storage_stop_requested.emit()
-        # self.storage_session_start_requested.emit()
-        self.device_selection_requested.emit(self._selected_device_addresses)
-        self.device_acquisition_start_requested.emit()
-
-    def stop_acquisition(self) -> None:
-        """Stop device acquisition."""
-        if not self.is_acquiring:
-            return
-
-        logger.info("Stopping acquisition")
-        self.device_acquisition_stop_requested.emit()
-        # Also stop experiment if running
-        if self.experiment_manager.is_running:
-            self.experiment_stop_requested.emit()
-
-    def set_interval(self, interval_ms: int) -> None:
-        """Change the acquisition interval.
-
-        Args:
-            interval_ms: New polling interval in milliseconds.
-        """
-        self.current_interval_ms = interval_ms
-        self.device_interval_change_requested.emit(interval_ms)
+    @QtCore.pyqtSlot(object)
+    def _on_device_info_collected(self, info: dict[str, DiscoveredDevice]) -> None:
+        """Cache latest device info collected from device manager."""
+        self._device_info_cache = info
 
     def shutdown(self) -> None:
         """Clean up threads and resources."""
         logger.info("Shutting down application controller")
 
-        self.device_shutdown_requested.emit()
-        self.storage_stop_requested.emit()
+        # Stop managers via direct calls (shutdown is an exception as it happens outside event loop)
+        self.managers.device.on_shutdown()
+        self.managers.storage.on_stop_request()
 
         QtWidgets.QApplication.processEvents()
 
+        # Quit threads
         self.device_manager_thread.quit()
         self.storage_manager_thread.quit()
         self.experiment_manager_thread.quit()
 
+        # Wait for threads to finish
         device_finished = self.device_manager_thread.wait(500)
         if not device_finished:
             logger.warning("Device manager thread did not finish within timeout")
@@ -193,87 +172,3 @@ class ApplicationController(QtCore.QObject):  # noqa: PLR0904
         experiment_finished = self.experiment_manager_thread.wait(500)
         if not experiment_finished:
             logger.warning("Experiment manager thread did not finish within timeout")
-
-    def update_selected_devices(self, addresses: list[str]) -> None:
-        """Update the set of selected device VISA addresses."""
-
-        self._selected_device_addresses = addresses
-        self.device_selection_requested.emit(self._selected_device_addresses)
-
-    def request_restore_session(self, path: Path | None = None) -> None:
-        """Ask the storage manager to restore a historic session."""
-
-        self.storage_restore_requested.emit(path)
-
-    def request_export_to_csv(self, export_path: Path, columns: list[str] | None = None) -> None:
-        """Request the current dataset to be exported to CSV."""
-
-        self.storage_export_requested.emit((export_path, columns))
-
-    def update_description(self, description: str) -> None:
-        """Forward experiment description updates to storage manager."""
-
-        self.storage_description_change_requested.emit(description)
-
-    def request_device_info(self) -> None:
-        """Request device information from device manager."""
-
-        self.device_info_requested.emit()
-
-    def send_device_command(self, address: str, command: str) -> None:
-        """Send command to specific device.
-
-        Args:
-            address: VISA resource address of target device.
-            command: SCPI command to send.
-        """
-
-        self.device_command_requested.emit(address, command)
-
-    @QtCore.pyqtSlot(object)
-    def _on_acquisition_state_changed(self, running: bool) -> None:
-        self._is_device_running = running
-
-    def start_experiment(self) -> None:
-        """Start experiment execution."""
-        self.experiment_start_requested.emit()
-
-    def stop_experiment(self) -> None:
-        """Stop experiment execution."""
-        self.experiment_stop_requested.emit()
-
-    def skip_experiment_forward(self) -> None:
-        """Skip to next step in experiment."""
-        self.experiment_skip_forward_requested.emit()
-
-    def set_experiment_steps(self, steps: list[Step]) -> None:
-        """Replace experiment plan with new steps."""
-        self.experiment_set_steps_requested.emit(steps)
-
-    def get_current_step(self) -> Step | None:
-        """Get currently executing step."""
-        return self.experiment_manager.current_step
-
-    def get_next_step(self) -> Step | None:
-        """Get next step to execute."""
-        return self.experiment_manager.next_step
-
-    def is_experiment_running(self) -> bool:
-        """Check if experiment is running."""
-        return self.experiment_manager.is_running
-
-    def get_experiment_log(self) -> list[tuple[str, str, datetime | None]]:
-        """Get execution history with timestamps."""
-        return self.experiment_manager.get_execution_log()
-
-    def request_experiment_steps(self) -> None:
-        """Request current experiment steps from manager."""
-        self.experiment_get_steps_requested.emit()
-
-    def generate_step_id(self) -> int:
-        """Generate unique step ID using thread-safe counter.
-
-        Returns:
-            Next sequential step ID from experiment manager.
-        """
-        return self.experiment_manager.threaded_new_step_id()
