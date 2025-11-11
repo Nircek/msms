@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 
 
 DEVICE_NOT_INITIALIZED_ERROR = "Device not initialized"
+ERROR_COOL_DOWN_PERIOD_ACTIVE = "Error cool down period active"
+ERROR_COOL_DOWN_STATE_ACTIVE = "Error cool down state active"
+VISA_IO_ERROR_DURING_OPERATION = "VISA IO Error during device operation"
 
 
 class DeviceBase(ABC):
@@ -59,10 +62,10 @@ class DeviceBase(ABC):
             raise RuntimeError(DEVICE_NOT_INITIALIZED_ERROR)
         if not bypass:
             if self._error_cool_down_time >= time():
-                self._logger.warning("Error cool down period active")
+                raise RuntimeError(ERROR_COOL_DOWN_PERIOD_ACTIVE)
                 return
             if self._error_cool_down_cause and not can_be_executed_after:
-                self._logger.warning("Error cool down state active")
+                raise RuntimeError(ERROR_COOL_DOWN_STATE_ACTIVE)
                 return
         try:
             yield
@@ -70,30 +73,40 @@ class DeviceBase(ABC):
             self._logger.exception("VISA IO Error during device operation")
             self._error_cool_down_cause = e.abbreviation
             self._error_cool_down_time = time() + self.error_cool_down_period
+            raise RuntimeError(VISA_IO_ERROR_DURING_OPERATION) from e
         else:
             self._error_cool_down_cause = None
 
     def close(self) -> None:
         """Close VISA resource connection."""
-        with self.error_cool_down_context_manager(bypass=True):
-            self._resource.close()
+        try:
+            with self.error_cool_down_context_manager(bypass=True):
+                self._resource.close()
+        except RuntimeError as e:
+            self._logger.warning("Failed to close resource cleanly: %s", e)
         del self._resource
 
     def command_resource(self, cmd: str, force: bool = False) -> None:
         """Send SCPI command to device."""
         self._last_command_time = self._last_read_time = time()
-        with self.error_cool_down_context_manager(bypass=force):
-            self._resource.write(cmd)
+        try:
+            with self.error_cool_down_context_manager(bypass=force):
+                self._resource.write(cmd)
+        except RuntimeError as e:
+            self._logger.warning("Failed to send command to device: %s", e)
         t1 = time()
         print(f"{self.initials}: {cmd!r} -- [{t1 - self._last_command_time:.1f}ms, T0]")
 
     def query_resource(self, cmd: str) -> str:
         """Send SCPI query and return response."""
         response, t0 = None, time()
-        with self.error_cool_down_context_manager():
-            response = self._resource.query(cmd)
+        try:
+            with self.error_cool_down_context_manager():
+                response = self._resource.query(cmd)
+        except RuntimeError as e:
+            self._logger.warning("Failed to query resource: %s", e)
         if response is None:
-            response = self._error_cool_down_cause
+            response = self._error_cool_down_cause or "unreachable"
 
         t1 = time()
         print(f"{self.initials}: {cmd!r} : {response!r} -- {1000 * (t1 - t0):.1f}ms")
@@ -101,9 +114,12 @@ class DeviceBase(ABC):
 
     def read_resource(self) -> str:
         """Read buffered response from device."""
-        response = self._error_cool_down_cause
-        with self.error_cool_down_context_manager(can_be_executed_after=False):
-            response = self._resource.read()
+        response = self._error_cool_down_cause or "unreachable"
+        try:
+            with self.error_cool_down_context_manager(can_be_executed_after=False):
+                response = self._resource.read()
+        except RuntimeError as e:
+            self._logger.warning("Failed to read resource: %s", e)
         t1 = time()
         accumulated_time = 1000 * (t1 - self._last_command_time)
         last_time = 1000 * (t1 - self._last_read_time)

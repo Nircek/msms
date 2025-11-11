@@ -61,7 +61,7 @@ class CsvPersistenceService:
             logger.warning("Persistence session already active")
             return
 
-        self.csv_file = Path(self.csv_file_path).open("w", buffering=1, encoding="utf-8")  # noqa: SIM115
+        self.csv_file = Path(self.csv_file_path).open("w", buffering=1, newline="", encoding="utf-8")  # noqa: SIM115
         self.csv_file_writer = csv.writer(self.csv_file)
         self.description_path.touch()
         self._is_active = True
