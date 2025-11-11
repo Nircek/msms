@@ -1,0 +1,92 @@
+"""Set setpoint step implementation."""
+
+import logging
+from typing import TYPE_CHECKING
+
+from PyQt6 import QtWidgets
+
+from msms.ui.controllers.app_controller import ApplicationController
+from msms.ui.dialogs.step_config_dialogs import SetSetpointDialog
+from msms.ui.experiment.register_step import register_step
+from msms.ui.experiment.step_base import Step
+
+if TYPE_CHECKING:
+    from msms.ui.managers.experiment_manager import ExperimentManager
+
+logger = logging.getLogger(__name__)
+
+
+@register_step("Set Setpoint")
+class SetSetpointStep(Step):
+    """Set a LakeShore device setpoint value."""
+
+    def __init__(self, step_id: str) -> None:
+        """Initialize step with default parameters.
+
+        Args:
+            step_id: Unique identifier for this step.
+        """
+        super().__init__(step_id)
+        self.device_address = ""
+        self.setpoint_value = 300.0
+
+    def get_label(self) -> str:
+        """Get human-readable label."""
+        if self.device_address:
+            return f"Set {self.device_address}: SETP {self.setpoint_value}"
+        return "Set Setpoint (not configured)"
+
+    def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: object) -> bool:
+        """Open dialog to edit step parameters.
+
+        Args:
+            parent: Parent widget for the dialog.
+            app_controller: Application controller for accessing devices and data.
+
+        Returns:
+            True if parameters were modified, False if cancelled.
+        """
+        # Get device info from app_controller using the same pattern as DeviceCommandDialog
+        device_info_map: dict[str, tuple[str, str]] = {}
+        if isinstance(app_controller, ApplicationController):
+            # Get device info directly from device manager
+            app_controller.device_manager._repository.initialize_visa()  # noqa: SLF001
+            raw_device_info = app_controller.device_manager._repository.get_devices_info()  # noqa: SLF001
+
+            for address, info in raw_device_info.items():
+                device_name = info.device_name or "Unknown"
+                display_text = f"{device_name} ({address})"
+                device_info_map[address] = (device_name, display_text)
+
+        dialog = SetSetpointDialog(parent, device_info=device_info_map)
+        dialog.set_device_address(self.device_address)
+        dialog.value_spinbox.setValue(self.setpoint_value)
+
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return False
+
+        device_address = dialog.get_device_address()
+        if not device_address:
+            QtWidgets.QMessageBox.warning(
+                dialog,
+                "Invalid Input",
+                "Device must be selected.",
+            )
+            return False
+
+        self.device_address = device_address
+        self.setpoint_value = dialog.get_setpoint_value()
+        return True
+
+    def on_start(self, runner: ExperimentManager) -> None:
+        """Send setpoint command when step starts."""
+        command = f"SETP {self.setpoint_value}"
+        try:
+            runner.send_device_command(self.device_address, command)
+            logger.info("Sent command to %s: %s", self.device_address, command)
+        except Exception:
+            logger.exception("Failed to send command to %s", self.device_address)
+
+    def evaluate(self, _runner: ExperimentManager) -> bool:  # noqa: PLR6301
+        """Complete immediately after sending command."""
+        return True

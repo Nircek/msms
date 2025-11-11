@@ -161,9 +161,8 @@ class PlotController(QtCore.QObject):
         columns = list(data_repository.columns or [])
         data = data_repository.data
 
-        if data.shape == ():
-            return
-        if "time" not in columns or self.current_column not in columns:
+        if data.shape == () or "time" not in columns or self.current_column not in columns:
+            self.plot_item.setData([], [])
             return
 
         x_idx = columns.index("time")

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING
 
@@ -9,10 +7,9 @@ from PyQt6 import QtCore
 from msms.ui.managers.csv_persistence_service import CsvPersistenceService, SessionSnapshot
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-if TYPE_CHECKING:
     from collections.abc import Mapping
+    from datetime import datetime
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +106,6 @@ class DataRepository:
 class StorageManager(QtCore.QObject):
     """Data transformation, persistence, and UI signals."""
 
-    data_changed = QtCore.pyqtSignal()
     columns_changed = QtCore.pyqtSignal(object)
     new_data_row = QtCore.pyqtSignal(object)
     restore_completed = QtCore.pyqtSignal()
@@ -127,6 +123,7 @@ class StorageManager(QtCore.QObject):
         self.t0 = 0.0
         self.columns: list[str] = []
         self.number_columns: list[str] = []
+        self._experiment_log: list[tuple[str, str, datetime | None]] = []
 
     @QtCore.pyqtSlot()
     def on_session_start_request(self) -> None:
@@ -143,6 +140,9 @@ class StorageManager(QtCore.QObject):
         self.t0 = 0.0
         self._is_running = True
         self.csv_persistence.start_session()
+        self.columns_changed.emit(self.number_columns)
+        self.new_data_row.emit({})
+        self.description_changed.emit("")
 
     @QtCore.pyqtSlot()
     def on_stop_request(self) -> None:
@@ -189,13 +189,22 @@ class StorageManager(QtCore.QObject):
             return
 
         try:
-            self.csv_persistence.export_to_csv(export_path, columns)
+            self.csv_persistence.export_to_csv(export_path, columns, self._experiment_log)
         except Exception:
             logger.exception("Failed to export data to %s", export_path)
             self.export_failed.emit(f"Failed to export data to {export_path}")
             return
 
         self.export_completed.emit(str(export_path))
+
+    @QtCore.pyqtSlot(object)
+    def on_experiment_log_update(self, log: list[tuple[str, str, datetime | None]]) -> None:
+        """Update cached experiment log for export.
+
+        Args:
+            log: List of (step_id, label, timestamp) tuples.
+        """
+        self._experiment_log = log
 
     @QtCore.pyqtSlot(object)
     def on_description_change_request(self, description: str) -> None:
