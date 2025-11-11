@@ -31,9 +31,14 @@ class ApplicationController(QtCore.QObject):
     """Coordinates threads and connects signals between components and managers.
 
     This controller's sole responsibility is thread management and signal routing.
-    It does NOT own any signals itself - it connects signals from UI components
-    (MainWindow, dialogs, controllers) to manager slots.
+    It owns minimal internal signals only for shutdown coordination - all other
+    signals are owned by UI components and connected by this controller.
     """
+
+    # Internal signals for shutdown coordination
+    _device_shutdown_requested = QtCore.pyqtSignal()
+    _storage_shutdown_requested = QtCore.pyqtSignal()
+    _experiment_shutdown_requested = QtCore.pyqtSignal()
 
     def __init__(self, interval_ms: int = 500) -> None:
         super().__init__()
@@ -81,6 +86,11 @@ class ApplicationController(QtCore.QObject):
 
         self._device_info_cache: dict[str, DiscoveredDevice] = {}
         self.managers.device.device_info_collected.connect(self._on_device_info_collected)
+
+        # Connect internal shutdown signals
+        self._device_shutdown_requested.connect(self.managers.device.on_shutdown)
+        self._storage_shutdown_requested.connect(self.managers.storage.on_stop_request)
+        self._experiment_shutdown_requested.connect(self.managers.experiment.on_stop_request)
 
     def connect_main_window_signals(self, main_window: MainWindow) -> None:
         """Connect MainWindow signals to manager slots.
@@ -149,9 +159,9 @@ class ApplicationController(QtCore.QObject):
         """Clean up threads and resources."""
         logger.info("Shutting down application controller")
 
-        # Stop managers via direct calls (shutdown is an exception as it happens outside event loop)
-        self.managers.device.on_shutdown()
-        self.managers.storage.on_stop_request()
+        self._device_shutdown_requested.emit()
+        self._storage_shutdown_requested.emit()
+        self._experiment_shutdown_requested.emit()
 
         QtWidgets.QApplication.processEvents()
 
