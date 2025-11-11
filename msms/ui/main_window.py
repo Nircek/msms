@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import pyqtgraph as pg  # type: ignore
+from git import Repo
 from PyQt6 import QtCore, QtGui, QtWidgets, uic
 
 from msms.ui.controllers.app_controller import ApplicationController
@@ -240,10 +241,14 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
     @QtCore.pyqtSlot()
     def on_actionAbout_triggered(self) -> None:
         """Show about dialog."""
-        about_text = """
+        repo = Repo(Path(__file__).parent.parent.parent)
+        commit = repo.head.commit
+        date = commit.committed_datetime.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+        about_text = f"""
         <h2>MSMS</h2>
         <p>Measurement System Management Software</p>
-        <p>Version 1.0</p>
+        <p>Version {date} {commit.hexsha}</p>
         <p>A PyQt6-based application for managing laboratory measurement devices.</p>
         """
         QtWidgets.QMessageBox.about(self, "About MSMS", about_text)

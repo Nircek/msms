@@ -393,8 +393,8 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionHelp"/>
     <addaction name="actionAbout"/>
+    <addaction name="actionHelp"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuDevices"/>
@@ -425,16 +425,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <action name="actionRestoreLastFile">
    <property name="text">
     <string>restore last file</string>
-   </property>
-  </action>
-  <action name="actionHelp">
-   <property name="text">
-    <string>help</string>
-   </property>
-  </action>
-  <action name="actionAbout">
-   <property name="text">
-    <string>about</string>
    </property>
   </action>
   <action name="actionStartAcquisition">
@@ -513,6 +503,22 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <action name="actionQuit">
    <property name="text">
     <string>quit</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>about</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>help</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
  </widget>
