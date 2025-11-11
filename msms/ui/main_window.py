@@ -24,15 +24,6 @@ class MainWindowUic(QtWidgets.QMainWindow):
         ui_file = Path(__file__).parent / "main_window.ui"
         uic.loadUi(str(ui_file), self)
         self.center_on_screen()
-        self.fix_slot_signal("chartConfigPushButton", "clicked")
-        self.fix_slot_signal("doActionPushButton", "clicked")
-        self.fix_slot_signal("actionRestoreLastFile", "triggered")
-        self.fix_slot_signal("actionSelectDevices", "triggered")
-        self.fix_slot_signal("actionManageExperiment", "triggered")
-        self.fix_slot_signal("actionDescribe", "triggered")
-        self.fix_slot_signal("actionExport", "triggered")
-        self.fix_slot_signal("actionHelp", "triggered")
-        self.fix_slot_signal("actionAbout", "triggered")
         self.autoFollowCheckBox: QtWidgets.QCheckBox
         self.chartConfigPushButton: QtWidgets.QPushButton
         self.doActionPushButton: QtWidgets.QPushButton
@@ -54,20 +45,6 @@ class MainWindowUic(QtWidgets.QMainWindow):
         self.actionRestoreLastFile: QtGui.QAction
         self.actionAbout: QtGui.QAction
         self.actionHelp: QtGui.QAction
-
-    def fix_slot_signal(self, widget_name: str, signal_name: str) -> None:
-        """Disconnect UIC's auto-wired slots and reconnect the desired overload."""
-
-        widget = self.findChild((QtWidgets.QPushButton, QtGui.QAction), widget_name)
-        slot = getattr(self, f"on_{widget_name}_{signal_name}", None)
-        widget_slot = getattr(widget, signal_name, None)
-        assert widget is not None
-        assert widget_slot is not None
-        assert widget.receivers(widget_slot) > 1
-        assert slot is not None
-        # UIC keeps connecting `clicked` and `clicked(bool)` and we need to disconnect all of them
-        widget_slot.disconnect()
-        widget_slot.connect(slot)
 
     def center_on_screen(self) -> None:
         """Move the window to the center of the primary screen."""
