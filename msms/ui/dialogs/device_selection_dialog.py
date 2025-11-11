@@ -38,6 +38,10 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
         layout.addWidget(self.status_label)
 
         self.device_table = QtWidgets.QTableWidget()
+        self.device_table.setStyleSheet(
+            "QTableWidget::item:selected { background-color: cyan; selection-color: #000000; }"
+        )
+
         self.device_table.setColumnCount(3)
         self.device_table.setHorizontalHeaderLabels(["Address", "Device", "IDN"])
         self.device_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
@@ -67,14 +71,17 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
 
         for row, device_info in enumerate(self.discovered_devices):
             address_item = QtWidgets.QTableWidgetItem(device_info.address or "N/A")
+            address_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
             self.device_table.setItem(row, 0, address_item)
 
             device_name = device_info.device_name or "Unknown"
             device_item = QtWidgets.QTableWidgetItem(device_name)
+            device_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
             self.device_table.setItem(row, 1, device_item)
 
             idn = device_info.idn or "N/A"
             idn_item = QtWidgets.QTableWidgetItem(idn)
+            idn_item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled | QtCore.Qt.ItemFlag.ItemIsSelectable)
             self.device_table.setItem(row, 2, idn_item)
 
         available_addresses = {device_info.address for device_info in self.discovered_devices if device_info.address}
