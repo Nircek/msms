@@ -60,12 +60,12 @@ def ui() -> None:
 
     def handle_sigint(_signum: int, _frame: FrameType | None) -> None:
         logger.info("SIGINT received, shutting down UI")
-        win.close()
+        app.quit()
 
     signal.signal(signal.SIGINT, handle_sigint)
     timer = QtCore.QTimer()  # timer trick to make Python handle signals
     timer.timeout.connect(lambda: None)
-    timer.start(2147483647)
+    timer.start(2000)
 
     win.show()
     exit_code = app.exec()
