@@ -40,19 +40,19 @@ class DisplayController:
 
         # Temperature readings
         sample, control = data.get("sample", "N/A"), data.get("control", "N/A")
-        sample = f"{sample:.2f}K" if isinstance(sample, float) else str(sample).strip()
-        control = f"{control:.2f}K" if isinstance(control, float) else str(control).strip()
+        sample = f"{sample:.2f}K" if isinstance(sample, float) else sample.strip()[:10]
+        control = f"{control:.2f}K" if isinstance(control, float) else control.strip()[:10]
         self.widgets.sample_label.setText(sample)
         self.widgets.control_label.setText(control)
 
         # Set point with unit
         set_point, set_point_unit = data.get("set_point", "N/A"), data.get("set_point_unit", "")
-        set_point = f"{set_point:.2f} {set_point_unit}" if isinstance(set_point, float) else str(set_point).strip()
+        set_point = f"{set_point:.2f} {set_point_unit}" if isinstance(set_point, float) else set_point.strip()[:10]
         self.widgets.set_point_label.setText(set_point)
 
         # Ramp rate
         ramp_rate = data.get("ramp_rate") or "-"
-        ramp_rate = f"{ramp_rate:.1f}K/s" if isinstance(ramp_rate, float) else str(ramp_rate).strip()
+        ramp_rate = f"{ramp_rate:.1f}K/min" if isinstance(ramp_rate, float) else ramp_rate.strip()[:10]
         self.widgets.ramp_label.setText(ramp_rate)
 
         # Update layout width if needed for proper label display
