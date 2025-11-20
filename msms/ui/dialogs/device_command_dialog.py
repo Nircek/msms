@@ -1,7 +1,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 if TYPE_CHECKING:
     from msms.connectivity.device_repository import DiscoveredDevice
@@ -14,8 +14,8 @@ class DeviceCommandDialog(QtWidgets.QDialog):
     """Dialog for selecting a device and sending commands to it."""
 
     # Device command signals
-    device_info_requested = QtCore.pyqtSignal()
-    device_command_requested = QtCore.pyqtSignal(object, object)
+    device_info_requested = QtCore.Signal()
+    device_command_requested = QtCore.Signal(object, object)
 
     def __init__(self, parent: QtWidgets.QWidget, app_controller: ApplicationController) -> None:
         """Initialize the device command dialog.
@@ -62,7 +62,7 @@ class DeviceCommandDialog(QtWidgets.QDialog):
         self.app_controller.managers.device.device_info_collected.connect(self._on_device_info_received)
         self.device_info_requested.emit()
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_device_info_received(self, device_info: dict[str, DiscoveredDevice]) -> None:
         """Handle device info response from the device manager."""
         self._device_info = device_info

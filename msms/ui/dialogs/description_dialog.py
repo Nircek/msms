@@ -2,7 +2,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,7 +68,8 @@ class DescriptionDialog(QtWidgets.QDialog):
         # Date
         self.date_edit = QtWidgets.QDateEdit()
         self.date_edit.setCalendarPopup(True)
-        self.date_edit.setDate(datetime.now(tz=UTC).date())
+        date = datetime.now().astimezone()
+        self.date_edit.setDate(QtCore.QDate(date.year, date.month, date.day))
         form_layout.addRow("Date:", self.date_edit)
 
         # Duration
@@ -259,7 +260,8 @@ class DescriptionDialog(QtWidgets.QDialog):
         date_str = "\n".join(section_content["Date"])
         try:
             parsed_date = datetime.strptime(date_str.split(",")[0].strip(), "%Y-%m-%d").replace(tzinfo=UTC)
-            self.date_edit.setDate(parsed_date.date())
+            date = parsed_date.date()
+            self.date_edit.setDate(QtCore.QDate(date.year, date.month, date.day))
         except ValueError, IndexError:
             pass
 

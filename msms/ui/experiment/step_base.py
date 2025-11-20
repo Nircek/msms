@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from datetime import datetime
 
-    from PyQt6 import QtWidgets
+    from PySide6 import QtWidgets
 
     from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager

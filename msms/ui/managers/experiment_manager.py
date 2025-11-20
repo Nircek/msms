@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtCore
+from PySide6 import QtCore
 
 if TYPE_CHECKING:
     from msms.ui.experiment.step_base import Step
@@ -20,13 +20,16 @@ class ExperimentManager(QtCore.QObject):
     records start timestamp for each executed step.
     """
 
-    current_step_changed = QtCore.pyqtSignal(object)
-    experiment_completed = QtCore.pyqtSignal()
-    experiment_started = QtCore.pyqtSignal()
-    experiment_stopped = QtCore.pyqtSignal()
-    experiment_log_updated = QtCore.pyqtSignal(object)
-    device_command_requested = QtCore.pyqtSignal(object, object)
-    steps_changed = QtCore.pyqtSignal(object)
+    step_started = QtCore.Signal(object)
+    step_finished = QtCore.Signal(object)
+    experiment_completed = QtCore.Signal()
+    experiment_stopped = QtCore.Signal()
+    experiment_error = QtCore.Signal(str)
+    current_step_changed = QtCore.Signal(object)
+    experiment_started = QtCore.Signal()
+    experiment_log_updated = QtCore.Signal(object)
+    device_command_requested = QtCore.Signal(object, object)
+    steps_changed = QtCore.Signal(object)
 
     def __init__(self) -> None:
         """Initialize experiment manager with empty plan."""
@@ -39,7 +42,7 @@ class ExperimentManager(QtCore.QObject):
         self._step_id_counter = 0
         self._step_id_mutex = QtCore.QMutex()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_setup(self) -> None:  # noqa: PLR6301
         """Initialize experiment manager in thread context."""
         QtCore.QCoreApplication.processEvents()
@@ -90,7 +93,7 @@ class ExperimentManager(QtCore.QObject):
         """
         self.device_command_requested.emit(device_address, command)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_set_steps(self, steps: list[Step]) -> None:
         """Replace experiment plan with new steps.
 
@@ -117,12 +120,12 @@ class ExperimentManager(QtCore.QObject):
         logger.info("Experiment plan updated with %d steps", len(steps))
         self.steps_changed.emit(list(self._steps))
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_get_steps_request(self) -> None:
         """Emit current steps list."""
         self.steps_changed.emit(list(self._steps))
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_start_request(self) -> None:
         """Start experiment execution."""
         if self._is_running:
@@ -147,7 +150,7 @@ class ExperimentManager(QtCore.QObject):
         self.experiment_started.emit()
         self._start_current_step()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_stop_request(self) -> None:
         """Stop experiment execution."""
         if not self._is_running:
@@ -160,7 +163,7 @@ class ExperimentManager(QtCore.QObject):
         logger.info("Experiment stopped at step %d", self._current_index)
         self.experiment_stopped.emit()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_skip_forward_request(self) -> None:
         """Skip to next step immediately."""
         if not self._is_running:
@@ -174,7 +177,7 @@ class ExperimentManager(QtCore.QObject):
 
         self._advance_to_next_step()
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_data_update(self, data: dict[str, str | float]) -> None:
         """Receive new measurement data and trigger evaluation.
 
@@ -185,7 +188,7 @@ class ExperimentManager(QtCore.QObject):
         if self._is_running:
             self._evaluate_step()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _start_current_step(self) -> None:
         """Initialize current step and record start timestamp."""
         current = self.current_step
@@ -229,7 +232,7 @@ class ExperimentManager(QtCore.QObject):
 
             self._advance_to_next_step()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _advance_to_next_step(self) -> None:
         """Move to next step in experiment plan."""
         self._current_index += 1
@@ -239,7 +242,7 @@ class ExperimentManager(QtCore.QObject):
         else:
             self._start_current_step()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _complete_experiment(self) -> None:
         """Finalize experiment execution."""
         self._is_running = False

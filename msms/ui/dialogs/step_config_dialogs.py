@@ -3,7 +3,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 logger = logging.getLogger(__name__)
 

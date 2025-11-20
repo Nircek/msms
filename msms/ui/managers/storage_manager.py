@@ -2,7 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PyQt6 import QtCore
+from PySide6 import QtCore
 
 from msms.ui.managers.csv_persistence_service import CsvPersistenceService, SessionSnapshot
 
@@ -106,13 +106,13 @@ class DataRepository:
 class StorageManager(QtCore.QObject):
     """Data transformation, persistence, and UI signals."""
 
-    columns_changed = QtCore.pyqtSignal(object)
-    new_data_row = QtCore.pyqtSignal(object)
-    restore_completed = QtCore.pyqtSignal()
-    restore_failed = QtCore.pyqtSignal(object)
-    export_completed = QtCore.pyqtSignal(object)
-    export_failed = QtCore.pyqtSignal(object)
-    description_changed = QtCore.pyqtSignal(object)
+    columns_changed = QtCore.Signal(object)
+    new_data_row = QtCore.Signal(object)
+    restore_completed = QtCore.Signal()
+    restore_failed = QtCore.Signal(object)
+    export_completed = QtCore.Signal(object)
+    export_failed = QtCore.Signal(object)
+    description_changed = QtCore.Signal(object)
 
     def __init__(self) -> None:
         super().__init__()
@@ -125,13 +125,13 @@ class StorageManager(QtCore.QObject):
         self.number_columns: list[str] = []
         self._experiment_log: list[tuple[str, str, datetime | None]] = []
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_setup(self) -> None:
         """Initialize storage manager in thread context."""
         self.on_session_start_request()
         QtCore.QCoreApplication.processEvents()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_session_start_request(self) -> None:
         """Start new acquisition session."""
         if self.csv_persistence.is_active:
@@ -150,7 +150,7 @@ class StorageManager(QtCore.QObject):
         self.new_data_row.emit({})
         self.description_changed.emit("")
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_stop_request(self) -> None:
         self._is_running = False
         self.csv_persistence.stop_session()
@@ -159,7 +159,7 @@ class StorageManager(QtCore.QObject):
         """Return most recent CSV file or None."""
         return self.csv_persistence.get_last_used_file()
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_session_restore_request(self, target: Path | None) -> None:
         """Restore a previously recorded session and notify the UI."""
         resolved = self.csv_persistence.resolve_restore_target(target)
@@ -184,7 +184,7 @@ class StorageManager(QtCore.QObject):
 
         self._apply_snapshot(snapshot)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_export_request(self, request: tuple[Path, list[str] | None]) -> None:
         """Export data to CSV."""
         export_path, columns = request
@@ -203,7 +203,7 @@ class StorageManager(QtCore.QObject):
 
         self.export_completed.emit(str(export_path))
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_experiment_log_update(self, log: list[tuple[str, str, datetime | None]]) -> None:
         """Update cached experiment log for export.
 
@@ -212,14 +212,14 @@ class StorageManager(QtCore.QObject):
         """
         self._experiment_log = log
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_description_change_request(self, description: str) -> None:
         """Persist experiment description to file."""
         description_text = "" if description is None else str(description)
         self.csv_persistence.set_description(description_text)
         # self.description_changed.emit(description_text) -- do not emit, UI already knows
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_header_set_request(self, initial_data: dict[str, str]) -> None:
         """Configure CSV header and emit columns to UI."""
         if not self.csv_persistence.is_active:
@@ -235,7 +235,7 @@ class StorageManager(QtCore.QObject):
         self.columns_changed.emit(self.number_columns)
         self._is_running = True
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_data_append_request(self, data: dict[str, str]) -> None:
         """Handle new acquisition payload."""
         if not self._is_running:

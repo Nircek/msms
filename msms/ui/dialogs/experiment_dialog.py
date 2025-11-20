@@ -3,7 +3,7 @@
 import logging
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from msms.ui.experiment import step_registry
 
@@ -18,8 +18,8 @@ class ExperimentDialog(QtWidgets.QDialog):
     """Dialog for creating and editing experiment plans."""
 
     # Experiment management signals
-    experiment_get_steps_requested = QtCore.pyqtSignal()
-    experiment_set_steps_requested = QtCore.pyqtSignal(object)
+    experiment_get_steps_requested = QtCore.Signal()
+    experiment_set_steps_requested = QtCore.Signal(object)
 
     def __init__(
         self,
@@ -95,7 +95,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_steps_changed(self, steps: list[Step]) -> None:
         """Handle steps changed signal from manager.
 
@@ -105,7 +105,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         self.steps = steps
         self._refresh_step_list()
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_current_step_changed(self, _current_step: Step | None) -> None:
         """Handle current step changed signal.
 

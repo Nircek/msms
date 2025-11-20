@@ -28,3 +28,10 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: compile-ui
+        name: Compile UI files
+        entry: poetry run python scripts/compile_ui.py
+        language: system
+        types: [file]
+        files: \.ui$
+        pass_filenames: false

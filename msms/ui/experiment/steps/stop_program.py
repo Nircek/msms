@@ -7,7 +7,7 @@ from msms.ui.experiment.register_step import register_step
 from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
-    from PyQt6 import QtWidgets
+    from PySide6 import QtWidgets
 
     from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.managers.experiment_manager import ExperimentManager

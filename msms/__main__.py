@@ -4,7 +4,7 @@ import sys
 import time
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 if TYPE_CHECKING:
     from types import FrameType

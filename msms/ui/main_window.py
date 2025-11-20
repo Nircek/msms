@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pyqtgraph as pg  # type: ignore
 from git import Repo
-from PyQt6 import QtCore, QtGui, QtWidgets, uic
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from msms.ui.controllers.app_controller import ApplicationController
 from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
@@ -16,6 +16,7 @@ from msms.ui.dialogs import (
     ExperimentDialog,
     MarkdownViewerDialog,
 )
+from msms.ui.ui_main_window import Ui_MainWindow
 
 logger = logging.getLogger(__name__)
 
@@ -27,51 +28,24 @@ INTERVAL_2_0S_MS = 2000
 INTERVAL_5_0S_MS = 5000
 
 
-class MainWindowUic(QtWidgets.QMainWindow):
-    def __init__(self) -> None:
-        super().__init__()
+class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):  # noqa: PLR0904
+    # Device signals
+    device_acquisition_start_requested = QtCore.Signal()
+    device_acquisition_stop_requested = QtCore.Signal()
+    device_selection_requested = QtCore.Signal(object)
+    device_interval_change_requested = QtCore.Signal(object)
 
-        ui_file = Path(__file__).parent / "main_window.ui"
-        uic.loadUi(str(ui_file), self)
-        self.center_on_screen()
-        self.autoFollowCheckBox: QtWidgets.QCheckBox
-        self.chartConfigPushButton: QtWidgets.QPushButton
-        self.plotWidget: pg.PlotWidget
-        self.experimentStatusLayoutWidget: QtWidgets.QWidget
-        self.timeValue: QtWidgets.QLabel
-        self.numberValue: QtWidgets.QLabel
-        self.sampleValue: QtWidgets.QLabel
-        self.controlValue: QtWidgets.QLabel
-        self.setPointValue: QtWidgets.QLabel
-        self.rampValue: QtWidgets.QLabel
-        self.experimentPlanTextEdit: QtWidgets.QTextEdit
-        self.commentPlainTextEdit: QtWidgets.QPlainTextEdit
-        self.variablesTextEdit: QtWidgets.QTextEdit
-        self.menuFile: QtWidgets.QMenu
-        self.menuDevices: QtWidgets.QMenu
-        self.menuAcquisition: QtWidgets.QMenu
-        self.menuExperiment: QtWidgets.QMenu
-        self.menuHelp: QtWidgets.QMenu
-        self.menuSetInterval: QtWidgets.QMenu
-        self.actionSelectDevices: QtGui.QAction
-        self.actionManageExperiment: QtGui.QAction
-        self.actionDescribe: QtGui.QAction
-        self.actionExport: QtGui.QAction
-        self.actionRestoreLastFile: QtGui.QAction
-        self.actionAbout: QtGui.QAction
-        self.actionHelp: QtGui.QAction
-        self.actionStartAcquisition: QtGui.QAction
-        self.actionStopAcquisition: QtGui.QAction
-        self.actionSendDeviceCommand: QtGui.QAction
-        self.actionInterval_0_1s: QtGui.QAction
-        self.actionInterval_0_5s: QtGui.QAction
-        self.actionInterval_1_0s: QtGui.QAction
-        self.actionInterval_2_0s: QtGui.QAction
-        self.actionInterval_5_0s: QtGui.QAction
-        self.actionStartExperiment: QtGui.QAction
-        self.actionStopExperiment: QtGui.QAction
-        self.actionSkipToNext: QtGui.QAction
-        self.actionQuit: QtGui.QAction
+    # Storage signals
+    storage_restore_requested = QtCore.Signal(object)
+    storage_export_requested = QtCore.Signal(object)
+    storage_description_change_requested = QtCore.Signal(object)
+    storage_session_start_requested = QtCore.Signal()
+    storage_stop_requested = QtCore.Signal()
+
+    # Experiment signals
+    experiment_start_requested = QtCore.Signal()
+    experiment_stop_requested = QtCore.Signal()
+    experiment_skip_forward_requested = QtCore.Signal()
 
     def center_on_screen(self) -> None:
         """Move the window to the center of the primary screen."""
@@ -83,28 +57,10 @@ class MainWindowUic(QtWidgets.QMainWindow):
         window_geometry.moveCenter(screen_geometry.center())
         self.move(window_geometry.topLeft())
 
-
-class MainWindow(MainWindowUic):  # noqa: PLR0904
-    # Device signals
-    device_acquisition_start_requested = QtCore.pyqtSignal()
-    device_acquisition_stop_requested = QtCore.pyqtSignal()
-    device_selection_requested = QtCore.pyqtSignal(object)
-    device_interval_change_requested = QtCore.pyqtSignal(object)
-
-    # Storage signals
-    storage_restore_requested = QtCore.pyqtSignal(object)
-    storage_export_requested = QtCore.pyqtSignal(object)
-    storage_description_change_requested = QtCore.pyqtSignal(object)
-    storage_session_start_requested = QtCore.pyqtSignal()
-    storage_stop_requested = QtCore.pyqtSignal()
-
-    # Experiment signals
-    experiment_start_requested = QtCore.pyqtSignal()
-    experiment_stop_requested = QtCore.pyqtSignal()
-    experiment_skip_forward_requested = QtCore.pyqtSignal()
-
     def __init__(self) -> None:
         super().__init__()
+        self.setupUi(self)
+        self.center_on_screen()
 
         self.chart_columns = ["time", "number", "dt"]
         self.current_chart_column = "timestamp"
@@ -156,7 +112,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         """Update plot with latest data from repository."""
         self.plot_controller.refresh_from_repository(self.app_controller.data_repository)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionRestoreLastFile_triggered(self) -> None:
         """Restore the last recorded session from disk if available."""
         last_file = self.app_controller.managers.storage.get_last_used_file()
@@ -165,7 +121,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         else:
             self.storage_restore_requested.emit(None)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionSelectDevices_triggered(self) -> None:
         """Show dialog for selecting devices to poll."""
         if self._selected_device_addresses:
@@ -185,7 +141,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
             self._selected_device_addresses = selected_addresses
             self.device_selection_requested.emit(selected_addresses)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionManageExperiment_triggered(self) -> None:
         """Show experiment management dialog."""
         if not self._selected_device_addresses:
@@ -208,7 +164,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         dialog = ExperimentDialog(self, app_controller=self.app_controller)
         dialog.exec()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionDescribe_triggered(self) -> None:
         """Show dialog for editing the experiment description."""
         current_description = self.commentPlainTextEdit.toPlainText()
@@ -218,7 +174,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
             self.commentPlainTextEdit.setPlainText(description)
             self.storage_description_change_requested.emit(description)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionExport_triggered(self) -> None:
         """Export current data to CSV file."""
         dialog = QtWidgets.QFileDialog(self)
@@ -231,14 +187,14 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
             logger.info("Exporting data to CSV file: %s", export_path)
             self.storage_export_requested.emit((export_path, None))
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionHelp_triggered(self) -> None:
         """Show help dialog with README content."""
         readme_path = Path(__file__).parent.parent.parent / "README.md"
         dialog = MarkdownViewerDialog.from_file(self, readme_path, "MSMS - Help")
         dialog.exec()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionAbout_triggered(self) -> None:
         """Show about dialog."""
         repo = Repo(Path(__file__).parent.parent.parent)
@@ -253,7 +209,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         """
         QtWidgets.QMessageBox.about(self, "About MSMS", about_text)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionStartAcquisition_triggered(self) -> None:
         """Start device acquisition."""
         if not self._selected_device_addresses:
@@ -269,7 +225,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         self.device_selection_requested.emit(self._selected_device_addresses)
         self.device_acquisition_start_requested.emit()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionStopAcquisition_triggered(self) -> None:
         """Stop device acquisition."""
         logger.info("Stopping device manager")
@@ -278,7 +234,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         if self.app_controller.managers.experiment.is_running:
             self.experiment_stop_requested.emit()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionSendDeviceCommand_triggered(self) -> None:
         """Open device command dialog."""
         dialog = DeviceCommandDialog(self, self.app_controller)
@@ -300,7 +256,7 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         self.actionInterval_2_0s.setChecked(current == INTERVAL_2_0S_MS)
         self.actionInterval_5_0s.setChecked(current == INTERVAL_5_0S_MS)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_chartConfigPushButton_clicked(self) -> None:
         """Display column selection menu for the main chart."""
 
@@ -313,14 +269,14 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
             action.triggered.connect(lambda _checked=None, col=column: self.set_chart_column(col))
         menu.exec(QtGui.QCursor.pos())
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def set_chart_column(self, column: str) -> None:
         self.current_chart_column = column
         self.chartConfigPushButton.setText(f"CHART: {column}")
         self.plot_controller.set_column(column)
         self.refresh_plot()
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_columns_change(self, columns: list[str]) -> None:
         """Handle notification that numeric chart columns have changed."""
         self.chart_columns = columns
@@ -328,37 +284,37 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
             self.current_chart_column = self.chart_columns[0]
             self.chartConfigPushButton.setText(f"CHART: {self.current_chart_column}")
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_update_data_labels(self, data: dict[str, float | str]) -> None:
         """Update UI labels and all relevant views with the latest data payload."""
         self.display_controller.update_labels(data)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_commentPlainTextEdit_textChanged(self) -> None:
         """Persist experiment comments as they change."""
 
         comment = self.commentPlainTextEdit.toPlainText()
         self.storage_description_change_requested.emit(comment)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_description_changed(self, description: str) -> None:
         previously_blocked = self.commentPlainTextEdit.blockSignals(True)
         self.commentPlainTextEdit.setPlainText(description)
         self.commentPlainTextEdit.blockSignals(previously_blocked)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_restore_failed(self, message: str) -> None:
         QtWidgets.QMessageBox.information(self, "Restore Session", message)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_export_completed(self, path: str) -> None:
         QtWidgets.QMessageBox.information(self, "Export Completed", f"Data exported to {path}")
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_export_failed(self, message: str) -> None:
         QtWidgets.QMessageBox.warning(self, "Export Failed", message)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionStartExperiment_triggered(self) -> None:
         """Start experiment execution."""
         # Check if experiment plan exists by checking execution log
@@ -372,19 +328,19 @@ class MainWindow(MainWindowUic):  # noqa: PLR0904
         self.experiment_start_requested.emit()
         logger.info("Experiment started")
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionStopExperiment_triggered(self) -> None:
         """Stop experiment execution."""
         self.experiment_stop_requested.emit()
         logger.info("Experiment stopped")
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionSkipToNext_triggered(self) -> None:
         """Skip to next step in experiment."""
         self.experiment_skip_forward_requested.emit()
         logger.info("Skipped to next step")
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_actionQuit_triggered(self) -> None:
         """Quit the application."""
         self.close()

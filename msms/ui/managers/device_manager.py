@@ -1,6 +1,6 @@
 import logging
 
-from PyQt6 import QtCore
+from PySide6 import QtCore
 
 from msms.connectivity.device_repository import DeviceRepository, DiscoveredDevice
 
@@ -10,11 +10,14 @@ logger = logging.getLogger(__name__)
 class DeviceManager(QtCore.QObject):
     """Coordinate device discovery and periodic data polling using QTimer."""
 
-    data_initialized = QtCore.pyqtSignal(object)
-    data_collected = QtCore.pyqtSignal(object)
-    devices_discovered = QtCore.pyqtSignal(object)
-    device_info_collected = QtCore.pyqtSignal(object)
-    acquisition_state_changed = QtCore.pyqtSignal(object)
+    devices_discovered = QtCore.Signal(object)
+    device_connected = QtCore.Signal(object)
+    device_disconnected = QtCore.Signal(object)
+    device_error = QtCore.Signal(object, object)
+    device_info_collected = QtCore.Signal(object)
+    data_initialized = QtCore.Signal(object)
+    data_collected = QtCore.Signal(object)
+    acquisition_state_changed = QtCore.Signal(bool)
 
     def __init__(self, interval_ms: int = 500) -> None:
         """Initialize the manager with a QTimer-based polling mechanism.
@@ -52,13 +55,13 @@ class DeviceManager(QtCore.QObject):
         """
         return self._repository.discover_devices()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_setup(self) -> None:
         """Initialize device manager in thread context."""
         self.initialize_visa()
         QtCore.QCoreApplication.processEvents()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_acquisition_start_request(self) -> None:
         """Initialize devices and start timer-based polling."""
         if self._is_running:
@@ -103,7 +106,7 @@ class DeviceManager(QtCore.QObject):
         data = self._repository.collect_data()
         self.data_collected.emit(data)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_acquisition_stop_request(self) -> None:
         """Stop polling and clean up device resources."""
         if not self._is_running:
@@ -118,7 +121,7 @@ class DeviceManager(QtCore.QObject):
         self.acquisition_state_changed.emit(False)
         logger.info("Device acquisition stopped")
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_device_select_request(self, addresses: list[str]) -> None:
         """Configure which device addresses should be polled."""
         self._selected_addresses = addresses
@@ -127,13 +130,13 @@ class DeviceManager(QtCore.QObject):
             logger.warning("Device selection changed during acquisition; restart required")
         self.on_device_info_request()  # Update device info after selection change
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_device_info_request(self) -> None:
         """Request information about the currently selected devices."""
         device_info = self._repository.get_devices_info()
         self.device_info_collected.emit(device_info)
 
-    @QtCore.pyqtSlot(object, object)
+    @QtCore.Slot(object, object)
     def on_device_command_request(self, device_address: str, command: str) -> None:
         """Send a command to a specific device."""
         try:
@@ -141,7 +144,7 @@ class DeviceManager(QtCore.QObject):
         except Exception:
             logger.exception("Failed to send command to %s: %s", device_address, command)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_interval_change_request(self, interval_ms: int) -> None:
         """Update polling interval from a queued signal."""
         self.interval_ms = interval_ms
@@ -149,7 +152,7 @@ class DeviceManager(QtCore.QObject):
         if self._timer is not None:
             self._timer.setInterval(interval_ms)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def on_discovery_start_request(self, interval_ms: int) -> None:
         """Start periodic device discovery polling."""
         if self._discovery_timer is not None and self._discovery_timer.isActive():
@@ -176,13 +179,13 @@ class DeviceManager(QtCore.QObject):
             devices = []
         self.devices_discovered.emit(devices)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_discovery_stop_request(self) -> None:
         """Stop periodic device discovery polling."""
         if self._discovery_timer is not None:
             self._discovery_timer.stop()
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def on_shutdown(self) -> None:
         """Release all VISA resources."""
 

@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from msms.ui.dialogs.step_config_dialogs import WaitForDurationDialog
 from msms.ui.experiment.register_step import register_step

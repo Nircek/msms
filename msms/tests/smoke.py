@@ -5,7 +5,7 @@ import time
 import typing
 from pathlib import Path
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from msms.logging_config import setup_logging
 from msms.ui.main_window import MainWindow
@@ -23,14 +23,14 @@ class TestSignals(QtCore.QObject):
     """
 
     # Device signals
-    device_discovery_start_requested = QtCore.pyqtSignal(object)
-    device_discovery_stop_requested = QtCore.pyqtSignal()
-    device_selection_requested = QtCore.pyqtSignal(object)
-    device_acquisition_start_requested = QtCore.pyqtSignal()
-    device_acquisition_stop_requested = QtCore.pyqtSignal()
+    device_discovery_start_requested = QtCore.Signal(object)
+    device_discovery_stop_requested = QtCore.Signal()
+    device_selection_requested = QtCore.Signal(object)
+    device_acquisition_start_requested = QtCore.Signal()
+    device_acquisition_stop_requested = QtCore.Signal()
 
     # Storage signals
-    storage_export_requested = QtCore.pyqtSignal(object)
+    storage_export_requested = QtCore.Signal(object)
 
 
 class SmokeTestError(RuntimeError):

@@ -5,7 +5,7 @@ from collections import deque
 from typing import TYPE_CHECKING
 
 import numpy as np
-from PyQt6 import QtWidgets
+from PySide6 import QtWidgets
 
 from msms.ui.dialogs.step_config_dialogs import WaitForStableDialog
 from msms.ui.experiment.register_step import register_step

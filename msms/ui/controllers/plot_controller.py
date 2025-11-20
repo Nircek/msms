@@ -3,9 +3,9 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyqtgraph as pg  # type: ignore
-from PyQt6 import QtCore, QtWidgets
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QGuiApplication
+from PySide6 import QtCore, QtWidgets
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
 
 if TYPE_CHECKING:
     from pyqtgraph.graphicsItems.ViewBox.ViewBox import ViewBox  # type: ignore
@@ -135,7 +135,7 @@ class PlotController(QtCore.QObject):
         except AttributeError:
             logger.debug("colorSchemeChanged signal not available (Qt < 6.5)")
 
-    @QtCore.pyqtSlot(Qt.ColorScheme)
+    @QtCore.Slot(Qt.ColorScheme)
     def _on_theme_changed(self, color_scheme: Qt.ColorScheme) -> None:
         """Handle OS theme change and update plot styling."""
         is_dark = color_scheme == Qt.ColorScheme.Dark

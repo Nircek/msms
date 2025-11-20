@@ -3,7 +3,7 @@ from datetime import timedelta
 from typing import TYPE_CHECKING, NamedTuple
 
 if TYPE_CHECKING:
-    from PyQt6 import QtWidgets
+    from PySide6 import QtWidgets
 
 logger = logging.getLogger(__name__)
 

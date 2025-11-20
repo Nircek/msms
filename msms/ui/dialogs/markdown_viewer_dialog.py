@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from PyQt6 import QtGui, QtWidgets
+from PySide6 import QtGui, QtWidgets
 
 logger = logging.getLogger(__name__)
 

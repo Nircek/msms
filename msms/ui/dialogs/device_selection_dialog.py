@@ -1,7 +1,7 @@
 import logging
 import typing
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 if typing.TYPE_CHECKING:
     from msms.connectivity.device_repository import DiscoveredDevice
@@ -14,8 +14,8 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
     """Dialog for discovering and selecting devices to poll."""
 
     # Device discovery signals
-    device_discovery_start_requested = QtCore.pyqtSignal(object)
-    device_discovery_stop_requested = QtCore.pyqtSignal()
+    device_discovery_start_requested = QtCore.Signal(object)
+    device_discovery_stop_requested = QtCore.Signal()
 
     def __init__(self, parent: QtWidgets.QWidget, app_controller: ApplicationController) -> None:
         super().__init__(parent)
@@ -65,7 +65,7 @@ class DeviceSelectionDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_devices_discovered(self, devices: list[DiscoveredDevice]) -> None:
         self.discovered_devices = devices
         self._update_device_table()

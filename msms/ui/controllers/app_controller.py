@@ -2,7 +2,7 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from msms.ui.managers import DeviceManager, ExperimentManager, StorageManager
 
@@ -36,9 +36,9 @@ class ApplicationController(QtCore.QObject):
     """
 
     # Internal signals for shutdown coordination
-    _device_shutdown_requested = QtCore.pyqtSignal()
-    _storage_shutdown_requested = QtCore.pyqtSignal()
-    _experiment_shutdown_requested = QtCore.pyqtSignal()
+    _device_shutdown_requested = QtCore.Signal()
+    _storage_shutdown_requested = QtCore.Signal()
+    _experiment_shutdown_requested = QtCore.Signal()
 
     def __init__(self, interval_ms: int = 500) -> None:
         super().__init__()
@@ -145,12 +145,12 @@ class ApplicationController(QtCore.QObject):
         """Provide read access to cached device info."""
         return self._device_info_cache
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_acquisition_state_changed(self, running: bool) -> None:
         """Track device acquisition state for shutdown logic."""
         self._is_device_running = running
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_device_info_collected(self, info: dict[str, DiscoveredDevice]) -> None:
         """Cache latest device info collected from device manager."""
         self._device_info_cache = info

@@ -1,11 +1,9 @@
 import logging
 from typing import TYPE_CHECKING
 
-from PyQt6 import QtCore
+from PySide6 import QtCore, QtWidgets
 
 if TYPE_CHECKING:
-    from PyQt6 import QtWidgets
-
     from msms.ui.controllers.app_controller import ApplicationController
     from msms.ui.experiment.step_base import Step
 
@@ -28,7 +26,7 @@ class ExperimentController(QtCore.QObject):
         self.app_controller.managers.experiment.current_step_changed.connect(self._on_experiment_step_changed)
         self.app_controller.managers.experiment.experiment_completed.connect(self._on_experiment_completed)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.Slot(object)
     def _on_experiment_step_changed(self, current_step: Step | None) -> None:
         """Update experiment plan display when current step changes."""
         next_step = self.app_controller.managers.experiment.next_step
@@ -56,7 +54,7 @@ class ExperimentController(QtCore.QObject):
         self.experiment_plan_text.setHtml(html)
         logger.debug("Experiment plan display updated: current=%s, next=%s", current_text, next_text)
 
-    @QtCore.pyqtSlot()
+    @QtCore.Slot()
     def _on_experiment_completed(self) -> None:
         """Handle experiment completion."""
         logger.info("Experiment completed")
