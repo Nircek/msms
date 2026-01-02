@@ -41,6 +41,15 @@ class DataRepository:
         self._columns: list[str] | None = None
         self._mutex = QtCore.QMutex()
 
+    def clear(self) -> None:
+        """Clear all stored data."""
+        self._mutex.lock()
+        self._data = np.ndarray([])
+        self._columns = None
+        self.capacity = 0
+        self.size = 0
+        self._mutex.unlock()
+
     @property
     def data(self) -> np.ndarray:
         """Return populated rows as numpy array view."""
@@ -139,7 +148,7 @@ class StorageManager(QtCore.QObject):
             return
 
         self.csv_persistence = CsvPersistenceService()
-        self._data_repository = DataRepository()
+        self._data_repository.clear()
         self.columns = []
         self.number_columns = []
         self.row_number = 1
@@ -258,7 +267,7 @@ class StorageManager(QtCore.QObject):
         self.columns = list(snapshot.columns)
         self.number_columns = list(snapshot.numeric_columns)
 
-        self._data_repository = DataRepository()
+        self._data_repository.clear()
         self._data_repository.load_snapshot(snapshot.numeric_columns, snapshot.numeric_rows)
 
         last_row_index = snapshot.row_count

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pyqtgraph as pg  # type: ignore
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 
@@ -22,14 +22,27 @@ def clamp_to_float_precision(value: float) -> float:
 class PlotController(QtCore.QObject):
     """Plot widget state, auto-follow, and user interaction."""
 
-    def __init__(self, plot_widget: pg.PlotWidget, auto_follow_checkbox: QtWidgets.QCheckBox) -> None:
+    def __init__(
+        self,
+        plot_widget: pg.PlotWidget,
+        auto_follow_checkbox: QtWidgets.QCheckBox,
+        chart_config_button: QtWidgets.QPushButton,
+        data_repository: DataRepository,
+    ) -> None:
         super().__init__()
         self.plot_widget = plot_widget
         self.auto_follow_checkbox = auto_follow_checkbox
+        self.chart_config_button = chart_config_button
+        self.data_repository = data_repository
+
+        # Column selection state
+        self.chart_columns = ["time", "number", "dt"]
+        self.current_chart_column = "timestamp"
 
         # Detect system theme and configure colors
         is_dark_theme = self._is_dark_theme()
         self._configure_plot_style(is_dark_theme)
+        self._configure_plot_options()
 
         # Create plot item with theme-appropriate colors
         line_color, marker_color = self._get_plot_colors(is_dark_theme)
@@ -54,9 +67,15 @@ class PlotController(QtCore.QObject):
         self.plot_widget.sigXRangeChanged.connect(self._on_x_range_changed)
         self.plot_widget.sigYRangeChanged.connect(self._on_y_range_changed)
         self.auto_follow_checkbox.toggled.connect(self._on_auto_follow_toggled)
+        self.chart_config_button.clicked.connect(self._on_chart_config_clicked)
 
         # Connect to OS theme changes (Qt 6.5+)
         self._connect_theme_change_signal()
+
+    def _configure_plot_options(self) -> None:
+        """Set plot interaction options."""
+        self.plot_widget.setClipToView(True)
+        self.plot_widget.getViewBox().setLimits(minXRange=1e-20, minYRange=1e-20, maxXRange=1e20, maxYRange=1e20)
 
     @staticmethod
     def _is_dark_theme() -> bool:
@@ -156,10 +175,10 @@ class PlotController(QtCore.QObject):
         logger.info("Plot column changed to: %s", column)
         self.current_column = column
 
-    def refresh_from_repository(self, data_repository: DataRepository) -> None:
+    def refresh_data_from_repository(self) -> None:
         """Update plot data from repository."""
-        columns = list(data_repository.columns or [])
-        data = data_repository.data
+        columns = list(self.data_repository.columns or [])
+        data = self.data_repository.data
 
         if data.shape == () or "time" not in columns or self.current_column not in columns:
             self.plot_item.setData([], [])
@@ -217,3 +236,30 @@ class PlotController(QtCore.QObject):
         logger.info("Auto-follow toggled: %s", checked)
         if checked and self.xs.size > 0:
             self._update_auto_follow_view()
+
+    @QtCore.Slot()
+    def _on_chart_config_clicked(self) -> None:
+        """Display column selection menu for the main chart."""
+        menu = QtWidgets.QMenu()
+        for column in self.chart_columns:
+            action = menu.addAction(column)
+            assert action is not None
+            action.setCheckable(True)
+            action.setChecked(column == self.current_chart_column)
+            action.triggered.connect(lambda _checked=None, col=column: self._set_chart_column(col))
+        menu.exec(QtGui.QCursor.pos())
+
+    def _set_chart_column(self, column: str) -> None:
+        """Update selected chart column and refresh display."""
+        self.current_chart_column = column
+        self.chart_config_button.setText(f"CHART: {column}")
+        self.set_column(column)
+        self.refresh_data_from_repository()
+
+    @QtCore.Slot(object)
+    def on_columns_change(self, columns: list[str]) -> None:
+        """Handle notification that numeric chart columns have changed."""
+        self.chart_columns = columns
+        if self.current_chart_column not in self.chart_columns and self.chart_columns:
+            self.current_chart_column = self.chart_columns[0]
+            self.chart_config_button.setText(f"CHART: {self.current_chart_column}")

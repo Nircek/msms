@@ -28,7 +28,7 @@ INTERVAL_2_0S_MS = 2000
 INTERVAL_5_0S_MS = 5000
 
 
-class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):  # noqa: PLR0904
+class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     # Device signals
     device_acquisition_start_requested = QtCore.Signal()
     device_acquisition_stop_requested = QtCore.Signal()
@@ -62,26 +62,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):  # noqa: PLR0904
         self.setupUi(self)
         self.center_on_screen()
 
-        self.chart_columns = ["time", "number", "dt"]
-        self.current_chart_column = "timestamp"
-
         self.app_controller = ApplicationController(interval_ms=500)
         self._selected_device_addresses: list[str] = []
 
-        # Connect MainWindow signals to managers
-        self.app_controller.connect_main_window_signals(self)
-
-        storage_manager = self.app_controller.managers.storage
-        storage_manager.new_data_row.connect(self.on_update_data_labels)
-        storage_manager.new_data_row.connect(lambda _data: self.refresh_plot())
-        storage_manager.columns_changed.connect(self.on_columns_change)
-        storage_manager.description_changed.connect(self._on_description_changed)
-        storage_manager.restore_failed.connect(self._on_restore_failed)
-        storage_manager.export_completed.connect(self._on_export_completed)
-        storage_manager.export_failed.connect(self._on_export_failed)
-
-        pg.setConfigOptions(antialias=True)
-        self.plot_controller = PlotController(self.plotWidget, self.autoFollowCheckBox)
+        self.plot_controller = PlotController(
+            self.plotWidget, self.autoFollowCheckBox, self.chartConfigPushButton, self.app_controller.data_repository
+        )
         self.display_controller = DisplayController(
             DisplayWidgets(
                 time_label=self.timeValue,
@@ -99,6 +85,20 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):  # noqa: PLR0904
             app_controller=self.app_controller,
         )
 
+        # Connect MainWindow signals to managers
+        self.app_controller.connect_main_window_signals(self)
+
+        storage_manager = self.app_controller.managers.storage
+        storage_manager.new_data_row.connect(self.on_update_data_labels)
+        storage_manager.new_data_row.connect(lambda _data: self.plot_controller.refresh_data_from_repository())
+        storage_manager.columns_changed.connect(self.plot_controller.on_columns_change)
+        storage_manager.description_changed.connect(self._on_description_changed)
+        storage_manager.restore_failed.connect(self._on_restore_failed)
+        storage_manager.export_completed.connect(self._on_export_completed)
+        storage_manager.export_failed.connect(self._on_export_failed)
+
+        pg.setConfigOptions(antialias=True)
+
         # Connect interval actions
         self.actionInterval_0_1s.triggered.connect(lambda: self._set_interval(INTERVAL_0_1S_MS))
         self.actionInterval_0_5s.triggered.connect(lambda: self._set_interval(INTERVAL_0_5S_MS))
@@ -107,10 +107,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):  # noqa: PLR0904
         self.actionInterval_5_0s.triggered.connect(lambda: self._set_interval(INTERVAL_5_0S_MS))
 
         self._update_interval_checks()
-
-    def refresh_plot(self) -> None:
-        """Update plot with latest data from repository."""
-        self.plot_controller.refresh_from_repository(self.app_controller.data_repository)
 
     @QtCore.Slot()
     def on_actionRestoreLastFile_triggered(self) -> None:
@@ -255,34 +251,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):  # noqa: PLR0904
         self.actionInterval_1_0s.setChecked(current == INTERVAL_1_0S_MS)
         self.actionInterval_2_0s.setChecked(current == INTERVAL_2_0S_MS)
         self.actionInterval_5_0s.setChecked(current == INTERVAL_5_0S_MS)
-
-    @QtCore.Slot()
-    def on_chartConfigPushButton_clicked(self) -> None:
-        """Display column selection menu for the main chart."""
-
-        menu = QtWidgets.QMenu(self)
-        for column in self.chart_columns:
-            action = menu.addAction(column)
-            assert action is not None
-            action.setCheckable(True)
-            action.setChecked(column == self.current_chart_column)
-            action.triggered.connect(lambda _checked=None, col=column: self.set_chart_column(col))
-        menu.exec(QtGui.QCursor.pos())
-
-    @QtCore.Slot(object)
-    def set_chart_column(self, column: str) -> None:
-        self.current_chart_column = column
-        self.chartConfigPushButton.setText(f"CHART: {column}")
-        self.plot_controller.set_column(column)
-        self.refresh_plot()
-
-    @QtCore.Slot(object)
-    def on_columns_change(self, columns: list[str]) -> None:
-        """Handle notification that numeric chart columns have changed."""
-        self.chart_columns = columns
-        if self.current_chart_column not in self.chart_columns and self.chart_columns:
-            self.current_chart_column = self.chart_columns[0]
-            self.chartConfigPushButton.setText(f"CHART: {self.current_chart_column}")
 
     @QtCore.Slot(object)
     def on_update_data_labels(self, data: dict[str, float | str]) -> None:
