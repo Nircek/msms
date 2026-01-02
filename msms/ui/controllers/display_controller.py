@@ -22,7 +22,7 @@ class DisplayWidgets(NamedTuple):
 
 
 class DisplayController:
-    """UI labels and text displays for experiment status."""
+    """UI labels and text displays for automation status."""
 
     def __init__(self, widgets: DisplayWidgets) -> None:
         self.widgets = widgets

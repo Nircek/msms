@@ -1,4 +1,4 @@
-"""Base class for experiment steps."""
+"""Base class for automation steps."""
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
@@ -9,13 +9,13 @@ if TYPE_CHECKING:
     from PySide6 import QtWidgets
 
     from msms.ui.controllers.app_controller import ApplicationController
-    from msms.ui.managers.experiment_manager import ExperimentManager
+    from msms.ui.managers.automation_manager import AutomationManager
 
 
 class Step(ABC):
-    """Abstract base class for experiment steps.
+    """Abstract base class for automation steps.
 
-    Steps define experimental actions or conditions. The Step Runner
+    Steps define automation actions or conditions. The Step Runner
     manages execution state (start timestamp, current index) globally.
     Each step implementation is stateless and queries services through
     the runner reference.
@@ -58,11 +58,11 @@ class Step(ABC):
         """
 
     @abstractmethod
-    def evaluate(self, runner: ExperimentManager) -> bool:
+    def evaluate(self, runner: AutomationManager) -> bool:
         """Check if conditions for completing this step are met.
 
         Args:
-            runner: Reference to the experiment manager providing
+            runner: Reference to the automation manager providing
                    access to data, devices, and other services.
 
         Returns:
@@ -70,22 +70,22 @@ class Step(ABC):
             False if step should continue.
         """
 
-    def on_start(self, runner: ExperimentManager) -> None:  # noqa: B027
+    def on_start(self, runner: AutomationManager) -> None:  # noqa: B027
         """Called once when this step becomes active.
 
         Override to issue commands to devices or perform
         initialization. Default implementation does nothing.
 
         Args:
-            runner: Reference to the experiment manager.
+            runner: Reference to the automation manager.
         """
 
-    def on_finish(self, runner: ExperimentManager) -> None:  # noqa: B027
+    def on_finish(self, runner: AutomationManager) -> None:  # noqa: B027
         """Called once when step completes.
 
         Override for cleanup or finalization. Default implementation
         does nothing.
 
         Args:
-            runner: Reference to the experiment manager.
+            runner: Reference to the automation manager.
         """

@@ -1,32 +1,32 @@
-"""Dialog for managing experiment plans."""
+"""Dialog for managing automation plans."""
 
 import logging
 from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtWidgets
 
-from msms.ui.experiment import step_registry
+from msms.ui.automation import step_registry
 
 if TYPE_CHECKING:
+    from msms.ui.automation.step_base import Step
     from msms.ui.controllers.app_controller import ApplicationController
-    from msms.ui.experiment.step_base import Step
 
 logger = logging.getLogger(__name__)
 
 
-class ExperimentDialog(QtWidgets.QDialog):
-    """Dialog for creating and editing experiment plans."""
+class AutomationDialog(QtWidgets.QDialog):
+    """Dialog for creating and editing automation plans."""
 
-    # Experiment management signals
-    experiment_get_steps_requested = QtCore.Signal()
-    experiment_set_steps_requested = QtCore.Signal(object)
+    # Automation management signals
+    automation_get_steps_requested = QtCore.Signal()
+    automation_set_steps_requested = QtCore.Signal(object)
 
     def __init__(
         self,
         parent: QtWidgets.QWidget | None,
         app_controller: ApplicationController,
     ) -> None:
-        """Initialize experiment dialog.
+        """Initialize automation dialog.
 
         Args:
             parent: Parent widget.
@@ -36,27 +36,27 @@ class ExperimentDialog(QtWidgets.QDialog):
         self.app_controller = app_controller
         self.steps: list[Step] = []
 
-        self.setWindowTitle("Experiment Plan")
+        self.setWindowTitle("Automation Plan")
         self.setMinimumSize(600, 400)
 
         self._setup_ui()
 
         # Connect to signals before requesting data
 
-        self.experiment_get_steps_requested.connect(self.app_controller.managers.experiment.on_get_steps_request)
-        self.experiment_set_steps_requested.connect(self.app_controller.managers.experiment.on_set_steps)
-        self.app_controller.managers.experiment.steps_changed.connect(self._on_steps_changed)
-        self.app_controller.managers.experiment.current_step_changed.connect(self._on_current_step_changed)
+        self.automation_get_steps_requested.connect(self.app_controller.managers.automation.on_get_steps_request)
+        self.automation_set_steps_requested.connect(self.app_controller.managers.automation.on_set_steps)
+        self.app_controller.managers.automation.steps_changed.connect(self._on_steps_changed)
+        self.app_controller.managers.automation.current_step_changed.connect(self._on_current_step_changed)
 
         # Request current steps
-        self.experiment_get_steps_requested.emit()
+        self.automation_get_steps_requested.emit()
 
     def _setup_ui(self) -> None:
         """Create dialog UI elements."""
         layout = QtWidgets.QVBoxLayout(self)
 
         # Step list
-        list_label = QtWidgets.QLabel("Experiment Steps:")
+        list_label = QtWidgets.QLabel("Automation Steps:")
         layout.addWidget(list_label)
 
         self.step_list = QtWidgets.QListWidget()
@@ -100,7 +100,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         """Handle steps changed signal from manager.
 
         Args:
-            steps: Updated list of experiment steps.
+            steps: Updated list of automation steps.
         """
         self.steps = steps
         self._refresh_step_list()
@@ -176,7 +176,7 @@ class ExperimentDialog(QtWidgets.QDialog):
             return
 
         # Generate unique step ID using thread-safe counter
-        step_id = f"step_{self.app_controller.managers.experiment.threaded_new_step_id()}"
+        step_id = f"step_{self.app_controller.managers.automation.threaded_new_step_id()}"
 
         # Create step instance with default parameters
         step_instance = step_class(step_id)
@@ -185,7 +185,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         if step_instance.exec_edit_dialog(self, self.app_controller):
             # Request manager to add the step
             updated_steps = [*self.steps, step_instance]
-            self.experiment_set_steps_requested.emit(updated_steps)
+            self.automation_set_steps_requested.emit(updated_steps)
 
     def _edit_step(self) -> None:
         """Edit selected step parameters."""
@@ -196,7 +196,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         step = self.steps[current_row]
         if step.exec_edit_dialog(self, self.app_controller):
             # Request manager to update the steps (to trigger refresh)
-            self.experiment_set_steps_requested.emit(list(self.steps))
+            self.automation_set_steps_requested.emit(list(self.steps))
 
     def _remove_step(self) -> None:
         """Remove selected step from plan."""
@@ -204,7 +204,7 @@ class ExperimentDialog(QtWidgets.QDialog):
         if current_row >= 0:
             # Request manager to remove the step
             updated_steps = [step for i, step in enumerate(self.steps) if i != current_row]
-            self.experiment_set_steps_requested.emit(updated_steps)
+            self.automation_set_steps_requested.emit(updated_steps)
 
     def _move_step_up(self) -> None:
         """Move selected step up in list."""
@@ -216,7 +216,7 @@ class ExperimentDialog(QtWidgets.QDialog):
                 updated_steps[current_row - 1],
                 updated_steps[current_row],
             )
-            self.experiment_set_steps_requested.emit(updated_steps)
+            self.automation_set_steps_requested.emit(updated_steps)
             # Update selection after refresh
             self.step_list.setCurrentRow(current_row - 1)
 
@@ -230,10 +230,10 @@ class ExperimentDialog(QtWidgets.QDialog):
                 updated_steps[current_row + 1],
                 updated_steps[current_row],
             )
-            self.experiment_set_steps_requested.emit(updated_steps)
+            self.automation_set_steps_requested.emit(updated_steps)
             # Update selection after refresh
             self.step_list.setCurrentRow(current_row + 1)
 
     def get_steps(self) -> list[Step]:
-        """Get configured experiment steps."""
+        """Get configured automation steps."""
         return self.steps

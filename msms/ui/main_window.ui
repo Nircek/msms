@@ -41,14 +41,14 @@
          <number>4</number>
         </property>
         <item>
-         <widget class="QWidget" name="experimentStatusLayoutWidget" native="true">
+         <widget class="QWidget" name="automationStatusLayoutWidget" native="true">
           <property name="minimumSize">
            <size>
             <width>300</width>
             <height>0</height>
            </size>
           </property>
-          <layout class="QVBoxLayout" name="experimentStatusLayout">
+          <layout class="QVBoxLayout" name="automationStatusLayout">
            <property name="spacing">
             <number>0</number>
            </property>
@@ -218,7 +218,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QTextEdit" name="experimentPlanTextEdit">
+         <widget class="QTextEdit" name="automationPlanTextEdit">
           <property name="maximumSize">
            <size>
             <width>16777215</width>
@@ -242,7 +242,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            <set>Qt::TextInteractionFlag::NoTextInteraction</set>
           </property>
           <property name="placeholderText">
-           <string>Experiment status.</string>
+           <string>Automation status.</string>
           </property>
          </widget>
         </item>
@@ -394,14 +394,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="actionStopAcquisition"/>
     <addaction name="separator"/>
    </widget>
-   <widget class="QMenu" name="menuExperiment">
+   <widget class="QMenu" name="menuAutomation">
     <property name="title">
-     <string>Experiment</string>
+     <string>Automation</string>
     </property>
-    <addaction name="actionManageExperiment"/>
+    <addaction name="actionManageAutomation"/>
     <addaction name="separator"/>
-    <addaction name="actionStartExperiment"/>
-    <addaction name="actionStopExperiment"/>
+    <addaction name="actionStartAutomation"/>
+    <addaction name="actionStopAutomation"/>
     <addaction name="actionSkipToNext"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -414,7 +414,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <addaction name="menuFile"/>
    <addaction name="menuDevices"/>
    <addaction name="menuAcquisition"/>
-   <addaction name="menuExperiment"/>
+   <addaction name="menuAutomation"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionSelectDevices">
@@ -422,9 +422,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <string>select devices</string>
    </property>
   </action>
-  <action name="actionManageExperiment">
+  <action name="actionManageAutomation">
    <property name="text">
-    <string>manage experiment</string>
+    <string>manage automation</string>
    </property>
   </action>
   <action name="actionExport">
@@ -495,14 +495,14 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <string>5.0 s</string>
    </property>
   </action>
-  <action name="actionStartExperiment">
+  <action name="actionStartAutomation">
    <property name="text">
-    <string>start experiment</string>
+    <string>start automation</string>
    </property>
   </action>
-  <action name="actionStopExperiment">
+  <action name="actionStopAutomation">
    <property name="text">
-    <string>stop experiment</string>
+    <string>stop automation</string>
    </property>
   </action>
   <action name="actionSkipToNext">

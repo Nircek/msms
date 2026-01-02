@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtWidgets
 
-from msms.ui.managers import DeviceManager, ExperimentManager, StorageManager
+from msms.ui.managers import AutomationManager, DeviceManager, StorageManager
 
 if TYPE_CHECKING:
     from msms.connectivity.device_repository import DiscoveredDevice
@@ -19,12 +19,12 @@ logger = logging.getLogger(__name__)
 class AppManagers:
     """Container for all application managers.
 
-    Provides structured access to device, storage, and experiment managers.
+    Provides structured access to device, storage, and automation managers.
     """
 
     device: DeviceManager
     storage: StorageManager
-    experiment: ExperimentManager
+    automation: AutomationManager
 
 
 class ApplicationController(QtCore.QObject):
@@ -38,7 +38,7 @@ class ApplicationController(QtCore.QObject):
     # Internal signals for shutdown coordination
     _device_shutdown_requested = QtCore.Signal()
     _storage_shutdown_requested = QtCore.Signal()
-    _experiment_shutdown_requested = QtCore.Signal()
+    _automation_shutdown_requested = QtCore.Signal()
 
     def __init__(self, interval_ms: int = 500) -> None:
         super().__init__()
@@ -48,38 +48,38 @@ class ApplicationController(QtCore.QObject):
         # Create managers
         device_manager = DeviceManager(interval_ms=interval_ms)
         storage_manager = StorageManager()
-        experiment_manager = ExperimentManager()
+        automation_manager = AutomationManager()
 
         self.managers = AppManagers(
             device=device_manager,
             storage=storage_manager,
-            experiment=experiment_manager,
+            automation=automation_manager,
         )
 
         # Create threads
         self.device_manager_thread = QtCore.QThread()
         self.storage_manager_thread = QtCore.QThread()
-        self.experiment_manager_thread = QtCore.QThread()
+        self.automation_manager_thread = QtCore.QThread()
 
         # Move managers to threads
         self.managers.device.moveToThread(self.device_manager_thread)
         self.managers.storage.moveToThread(self.storage_manager_thread)
-        self.managers.experiment.moveToThread(self.experiment_manager_thread)
+        self.managers.automation.moveToThread(self.automation_manager_thread)
 
         # Connect thread started signals to on_setup methods
         self.device_manager_thread.started.connect(self.managers.device.on_setup)
         self.storage_manager_thread.started.connect(self.managers.storage.on_setup)
-        self.experiment_manager_thread.started.connect(self.managers.experiment.on_setup)
+        self.automation_manager_thread.started.connect(self.managers.automation.on_setup)
 
         # Connect manager-to-manager signals
         self._connect_device_to_storage()
-        self._connect_storage_to_experiment()
-        self._connect_experiment_to_device()
+        self._connect_storage_to_automation()
+        self._connect_automation_to_device()
 
         # Start threads
         self.storage_manager_thread.start()
         self.device_manager_thread.start()
-        self.experiment_manager_thread.start()
+        self.automation_manager_thread.start()
 
         self._device_info_cache: dict[str, DiscoveredDevice] = {}
         self.managers.device.device_info_collected.connect(self._on_device_info_collected)
@@ -87,7 +87,7 @@ class ApplicationController(QtCore.QObject):
         # Connect internal shutdown signals
         self._device_shutdown_requested.connect(self.managers.device.on_shutdown)
         self._storage_shutdown_requested.connect(self.managers.storage.on_stop_request)
-        self._experiment_shutdown_requested.connect(self.managers.experiment.on_stop_request)
+        self._automation_shutdown_requested.connect(self.managers.automation.on_stop_request)
 
     def connect_main_window_signals(self, main_window: MainWindow) -> None:
         """Connect MainWindow signals to manager slots.
@@ -108,24 +108,24 @@ class ApplicationController(QtCore.QObject):
         main_window.storage_stop_requested.connect(self.managers.storage.on_stop_request)
         main_window.storage_session_start_requested.connect(self.managers.storage.on_session_start_request)
 
-        # Experiment signals
-        main_window.experiment_start_requested.connect(self.managers.experiment.on_start_request)
-        main_window.experiment_stop_requested.connect(self.managers.experiment.on_stop_request)
-        main_window.experiment_skip_forward_requested.connect(self.managers.experiment.on_skip_step_request)
+        # Automation signals
+        main_window.automation_start_requested.connect(self.managers.automation.on_start_request)
+        main_window.automation_stop_requested.connect(self.managers.automation.on_stop_request)
+        main_window.automation_skip_forward_requested.connect(self.managers.automation.on_skip_step_request)
 
     def _connect_device_to_storage(self) -> None:
         """Connect device manager signals to storage manager slots."""
         self.managers.device.data_initialized.connect(self.managers.storage.on_header_set_request)
         self.managers.device.data_collected.connect(self.managers.storage.on_data_append_request)
 
-    def _connect_storage_to_experiment(self) -> None:
-        """Connect storage manager signals to experiment manager slots."""
-        self.managers.storage.new_data_row.connect(self.managers.experiment.on_data_update)
+    def _connect_storage_to_automation(self) -> None:
+        """Connect storage manager signals to automation manager slots."""
+        self.managers.storage.new_data_row.connect(self.managers.automation.on_data_update)
 
-    def _connect_experiment_to_device(self) -> None:
-        """Connect experiment manager signals to device manager slots."""
-        self.managers.experiment.experiment_log_changed.connect(self.managers.storage.on_experiment_log_update)
-        self.managers.experiment.device_command_requested.connect(self.managers.device.on_device_command_request)
+    def _connect_automation_to_device(self) -> None:
+        """Connect automation manager signals to device manager slots."""
+        self.managers.automation.automation_log_changed.connect(self.managers.storage.on_automation_log_update)
+        self.managers.automation.device_command_requested.connect(self.managers.device.on_device_command_request)
 
     @property
     def data_repository(self) -> DataRepository:
@@ -148,14 +148,14 @@ class ApplicationController(QtCore.QObject):
 
         self._device_shutdown_requested.emit()
         self._storage_shutdown_requested.emit()
-        self._experiment_shutdown_requested.emit()
+        self._automation_shutdown_requested.emit()
 
         QtWidgets.QApplication.processEvents()
 
         # Quit threads
         self.device_manager_thread.quit()
         self.storage_manager_thread.quit()
-        self.experiment_manager_thread.quit()
+        self.automation_manager_thread.quit()
 
         # Wait for threads to finish
         device_finished = self.device_manager_thread.wait(500)
@@ -166,6 +166,6 @@ class ApplicationController(QtCore.QObject):
         if not storage_finished:
             logger.warning("Storage manager thread did not finish within timeout")
 
-        experiment_finished = self.experiment_manager_thread.wait(500)
-        if not experiment_finished:
-            logger.warning("Experiment manager thread did not finish within timeout")
+        automation_finished = self.automation_manager_thread.wait(500)
+        if not automation_finished:
+            logger.warning("Automation manager thread did not finish within timeout")

@@ -132,7 +132,7 @@ class StorageManager(QtCore.QObject):
         self.t0 = 0.0
         self.columns: list[str] = []
         self.number_columns: list[str] = []
-        self._experiment_log: list[tuple[str, str, datetime | None]] = []
+        self._automation_log: list[tuple[str, str, datetime | None]] = []
 
     @QtCore.Slot()
     def on_setup(self) -> None:
@@ -204,7 +204,7 @@ class StorageManager(QtCore.QObject):
             return
 
         try:
-            self.csv_persistence.export_to_csv(export_path, columns, self._experiment_log)
+            self.csv_persistence.export_to_csv(export_path, columns, self._automation_log)
         except Exception:
             logger.exception("Failed to export data to %s", export_path)
             self.export_failed.emit(f"Failed to export data to {export_path}")
@@ -213,17 +213,17 @@ class StorageManager(QtCore.QObject):
         self.export_completed.emit(str(export_path))
 
     @QtCore.Slot(object)
-    def on_experiment_log_update(self, log: list[tuple[str, str, datetime | None]]) -> None:
-        """Update cached experiment log for export.
+    def on_automation_log_update(self, log: list[tuple[str, str, datetime | None]]) -> None:
+        """Update cached automation log for export.
 
         Args:
             log: List of (step_id, label, timestamp) tuples.
         """
-        self._experiment_log = log
+        self._automation_log = log
 
     @QtCore.Slot(object)
     def on_description_change_request(self, description: str) -> None:
-        """Persist experiment description to file."""
+        """Persist automation description to file."""
         description_text = "" if description is None else str(description)
         self.csv_persistence.set_description(description_text)
         # self.description_changed.emit(description_text) -- do not emit, UI already knows

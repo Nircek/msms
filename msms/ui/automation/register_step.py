@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from msms.ui.experiment.step_base import Step
+    from msms.ui.automation.step_base import Step
 
 logger = logging.getLogger(__name__)
 

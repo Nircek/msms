@@ -5,13 +5,13 @@ from typing import TYPE_CHECKING
 
 from PySide6 import QtWidgets
 
+from msms.ui.automation.register_step import register_step
+from msms.ui.automation.step_base import Step
 from msms.ui.dialogs.step_config_dialogs import SetSetpointDialog
-from msms.ui.experiment.register_step import register_step
-from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
     from msms.ui.controllers.app_controller import ApplicationController
-    from msms.ui.managers.experiment_manager import ExperimentManager
+    from msms.ui.managers.automation_manager import AutomationManager
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class SetSetpointStep(Step):
         self.setpoint_value = dialog.get_setpoint_value()
         return True
 
-    def on_start(self, runner: ExperimentManager) -> None:
+    def on_start(self, runner: AutomationManager) -> None:
         """Send setpoint command when step starts."""
         command = f"SETP {self.setpoint_value}"
         try:
@@ -84,6 +84,6 @@ class SetSetpointStep(Step):
         except Exception:
             logger.exception("Failed to send command to %s", self.device_address)
 
-    def evaluate(self, _runner: ExperimentManager) -> bool:  # noqa: PLR6301
+    def evaluate(self, _runner: AutomationManager) -> bool:  # noqa: PLR6301
         """Complete immediately after sending command."""
         return True

@@ -1,4 +1,4 @@
-"""Configuration dialogs for experiment steps."""
+"""Configuration dialogs for automation steps."""
 
 import logging
 from datetime import UTC, datetime, timedelta

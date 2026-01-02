@@ -6,13 +6,13 @@ from typing import TYPE_CHECKING
 
 from PySide6 import QtWidgets
 
+from msms.ui.automation.register_step import register_step
+from msms.ui.automation.step_base import Step
 from msms.ui.dialogs.step_config_dialogs import WaitForDatetimeDialog
-from msms.ui.experiment.register_step import register_step
-from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
     from msms.ui.controllers.app_controller import ApplicationController
-    from msms.ui.managers.experiment_manager import ExperimentManager
+    from msms.ui.managers.automation_manager import AutomationManager
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +52,6 @@ class WaitForDatetimeStep(Step):
         self.target_datetime = dialog.get_datetime()
         return True
 
-    def evaluate(self, _runner: ExperimentManager) -> bool:
+    def evaluate(self, _runner: AutomationManager) -> bool:
         """Check if current time has reached target."""
         return datetime.now(UTC) >= self.target_datetime

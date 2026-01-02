@@ -31,8 +31,8 @@ class Ui_MainWindow(object):
         MainWindow.resize(1200, 800)
         self.actionSelectDevices = QAction(MainWindow)
         self.actionSelectDevices.setObjectName(u"actionSelectDevices")
-        self.actionManageExperiment = QAction(MainWindow)
-        self.actionManageExperiment.setObjectName(u"actionManageExperiment")
+        self.actionManageAutomation = QAction(MainWindow)
+        self.actionManageAutomation.setObjectName(u"actionManageAutomation")
         self.actionExport = QAction(MainWindow)
         self.actionExport.setObjectName(u"actionExport")
         self.actionRestoreLastFile = QAction(MainWindow)
@@ -59,10 +59,10 @@ class Ui_MainWindow(object):
         self.actionInterval_5_0s = QAction(MainWindow)
         self.actionInterval_5_0s.setObjectName(u"actionInterval_5_0s")
         self.actionInterval_5_0s.setCheckable(True)
-        self.actionStartExperiment = QAction(MainWindow)
-        self.actionStartExperiment.setObjectName(u"actionStartExperiment")
-        self.actionStopExperiment = QAction(MainWindow)
-        self.actionStopExperiment.setObjectName(u"actionStopExperiment")
+        self.actionStartAutomation = QAction(MainWindow)
+        self.actionStartAutomation.setObjectName(u"actionStartAutomation")
+        self.actionStopAutomation = QAction(MainWindow)
+        self.actionStopAutomation.setObjectName(u"actionStopAutomation")
         self.actionSkipToNext = QAction(MainWindow)
         self.actionSkipToNext.setObjectName(u"actionSkipToNext")
         self.actionQuit = QAction(MainWindow)
@@ -85,23 +85,23 @@ class Ui_MainWindow(object):
         self.leftPane = QVBoxLayout()
         self.leftPane.setSpacing(4)
         self.leftPane.setObjectName(u"leftPane")
-        self.experimentStatusLayoutWidget = QWidget(self.centralWidget)
-        self.experimentStatusLayoutWidget.setObjectName(u"experimentStatusLayoutWidget")
-        self.experimentStatusLayoutWidget.setMinimumSize(QSize(300, 0))
-        self.experimentStatusLayout = QVBoxLayout(self.experimentStatusLayoutWidget)
-        self.experimentStatusLayout.setSpacing(0)
-        self.experimentStatusLayout.setObjectName(u"experimentStatusLayout")
-        self.experimentStatusLayout.setContentsMargins(4, 0, 4, 0)
+        self.automationStatusLayoutWidget = QWidget(self.centralWidget)
+        self.automationStatusLayoutWidget.setObjectName(u"automationStatusLayoutWidget")
+        self.automationStatusLayoutWidget.setMinimumSize(QSize(300, 0))
+        self.automationStatusLayout = QVBoxLayout(self.automationStatusLayoutWidget)
+        self.automationStatusLayout.setSpacing(0)
+        self.automationStatusLayout.setObjectName(u"automationStatusLayout")
+        self.automationStatusLayout.setContentsMargins(4, 0, 4, 0)
         self.row1 = QHBoxLayout()
         self.row1.setObjectName(u"row1")
-        self.timeValue = QLabel(self.experimentStatusLayoutWidget)
+        self.timeValue = QLabel(self.automationStatusLayoutWidget)
         self.timeValue.setObjectName(u"timeValue")
         self.timeValue.setStyleSheet(u"font-size: 32pt; font-weight: 700;")
         self.timeValue.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.row1.addWidget(self.timeValue)
 
-        self.numberValue = QLabel(self.experimentStatusLayoutWidget)
+        self.numberValue = QLabel(self.automationStatusLayoutWidget)
         self.numberValue.setObjectName(u"numberValue")
         self.numberValue.setStyleSheet(u"font-size: 32pt; font-weight: 700;")
         self.numberValue.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
@@ -109,18 +109,18 @@ class Ui_MainWindow(object):
         self.row1.addWidget(self.numberValue)
 
 
-        self.experimentStatusLayout.addLayout(self.row1)
+        self.automationStatusLayout.addLayout(self.row1)
 
         self.row2 = QHBoxLayout()
         self.row2.setObjectName(u"row2")
-        self.sampleLabel = QLabel(self.experimentStatusLayoutWidget)
+        self.sampleLabel = QLabel(self.automationStatusLayoutWidget)
         self.sampleLabel.setObjectName(u"sampleLabel")
         self.sampleLabel.setStyleSheet(u"font-size: 9pt;")
         self.sampleLabel.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.row2.addWidget(self.sampleLabel)
 
-        self.controlLabel = QLabel(self.experimentStatusLayoutWidget)
+        self.controlLabel = QLabel(self.automationStatusLayoutWidget)
         self.controlLabel.setObjectName(u"controlLabel")
         self.controlLabel.setStyleSheet(u"font-size: 9pt;")
         self.controlLabel.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
@@ -128,18 +128,18 @@ class Ui_MainWindow(object):
         self.row2.addWidget(self.controlLabel)
 
 
-        self.experimentStatusLayout.addLayout(self.row2)
+        self.automationStatusLayout.addLayout(self.row2)
 
         self.row3 = QHBoxLayout()
         self.row3.setObjectName(u"row3")
-        self.sampleValue = QLabel(self.experimentStatusLayoutWidget)
+        self.sampleValue = QLabel(self.automationStatusLayoutWidget)
         self.sampleValue.setObjectName(u"sampleValue")
         self.sampleValue.setStyleSheet(u"font-size: 32pt; font-weight: 700;")
         self.sampleValue.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.row3.addWidget(self.sampleValue)
 
-        self.controlValue = QLabel(self.experimentStatusLayoutWidget)
+        self.controlValue = QLabel(self.automationStatusLayoutWidget)
         self.controlValue.setObjectName(u"controlValue")
         self.controlValue.setStyleSheet(u"font-size: 32pt; font-weight: 700;")
         self.controlValue.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
@@ -147,18 +147,18 @@ class Ui_MainWindow(object):
         self.row3.addWidget(self.controlValue)
 
 
-        self.experimentStatusLayout.addLayout(self.row3)
+        self.automationStatusLayout.addLayout(self.row3)
 
         self.row4 = QHBoxLayout()
         self.row4.setObjectName(u"row4")
-        self.setPointLabel = QLabel(self.experimentStatusLayoutWidget)
+        self.setPointLabel = QLabel(self.automationStatusLayoutWidget)
         self.setPointLabel.setObjectName(u"setPointLabel")
         self.setPointLabel.setStyleSheet(u"font-size: 9pt;")
         self.setPointLabel.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.row4.addWidget(self.setPointLabel)
 
-        self.rampLabel = QLabel(self.experimentStatusLayoutWidget)
+        self.rampLabel = QLabel(self.automationStatusLayoutWidget)
         self.rampLabel.setObjectName(u"rampLabel")
         self.rampLabel.setStyleSheet(u"font-size: 9pt;")
         self.rampLabel.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
@@ -166,18 +166,18 @@ class Ui_MainWindow(object):
         self.row4.addWidget(self.rampLabel)
 
 
-        self.experimentStatusLayout.addLayout(self.row4)
+        self.automationStatusLayout.addLayout(self.row4)
 
         self.row5 = QHBoxLayout()
         self.row5.setObjectName(u"row5")
-        self.setPointValue = QLabel(self.experimentStatusLayoutWidget)
+        self.setPointValue = QLabel(self.automationStatusLayoutWidget)
         self.setPointValue.setObjectName(u"setPointValue")
         self.setPointValue.setStyleSheet(u"font-size: 32pt; font-weight: 700;")
         self.setPointValue.setAlignment(Qt.AlignmentFlag.AlignLeading|Qt.AlignmentFlag.AlignLeft|Qt.AlignmentFlag.AlignVCenter)
 
         self.row5.addWidget(self.setPointValue)
 
-        self.rampValue = QLabel(self.experimentStatusLayoutWidget)
+        self.rampValue = QLabel(self.automationStatusLayoutWidget)
         self.rampValue.setObjectName(u"rampValue")
         self.rampValue.setStyleSheet(u"font-size: 32pt; font-weight: 700;")
         self.rampValue.setAlignment(Qt.AlignmentFlag.AlignRight|Qt.AlignmentFlag.AlignTrailing|Qt.AlignmentFlag.AlignVCenter)
@@ -185,18 +185,18 @@ class Ui_MainWindow(object):
         self.row5.addWidget(self.rampValue)
 
 
-        self.experimentStatusLayout.addLayout(self.row5)
+        self.automationStatusLayout.addLayout(self.row5)
 
 
-        self.leftPane.addWidget(self.experimentStatusLayoutWidget)
+        self.leftPane.addWidget(self.automationStatusLayoutWidget)
 
-        self.experimentPlanTextEdit = QTextEdit(self.centralWidget)
-        self.experimentPlanTextEdit.setObjectName(u"experimentPlanTextEdit")
-        self.experimentPlanTextEdit.setMaximumSize(QSize(16777215, 60))
-        self.experimentPlanTextEdit.viewport().setProperty(u"cursor", QCursor(Qt.CursorShape.ArrowCursor))
-        self.experimentPlanTextEdit.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
+        self.automationPlanTextEdit = QTextEdit(self.centralWidget)
+        self.automationPlanTextEdit.setObjectName(u"automationPlanTextEdit")
+        self.automationPlanTextEdit.setMaximumSize(QSize(16777215, 60))
+        self.automationPlanTextEdit.viewport().setProperty(u"cursor", QCursor(Qt.CursorShape.ArrowCursor))
+        self.automationPlanTextEdit.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
 
-        self.leftPane.addWidget(self.experimentPlanTextEdit)
+        self.leftPane.addWidget(self.automationPlanTextEdit)
 
         self.line = QFrame(self.centralWidget)
         self.line.setObjectName(u"line")
@@ -288,8 +288,8 @@ class Ui_MainWindow(object):
         self.menuDevices.setObjectName(u"menuDevices")
         self.menuAcquisition = QMenu(self.menuBar)
         self.menuAcquisition.setObjectName(u"menuAcquisition")
-        self.menuExperiment = QMenu(self.menuBar)
-        self.menuExperiment.setObjectName(u"menuExperiment")
+        self.menuAutomation = QMenu(self.menuBar)
+        self.menuAutomation.setObjectName(u"menuAutomation")
         self.menuHelp = QMenu(self.menuBar)
         self.menuHelp.setObjectName(u"menuHelp")
         MainWindow.setMenuBar(self.menuBar)
@@ -297,7 +297,7 @@ class Ui_MainWindow(object):
         self.menuBar.addAction(self.menuFile.menuAction())
         self.menuBar.addAction(self.menuDevices.menuAction())
         self.menuBar.addAction(self.menuAcquisition.menuAction())
-        self.menuBar.addAction(self.menuExperiment.menuAction())
+        self.menuBar.addAction(self.menuAutomation.menuAction())
         self.menuBar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionRestoreLastFile)
         self.menuFile.addAction(self.actionExport)
@@ -308,11 +308,11 @@ class Ui_MainWindow(object):
         self.menuAcquisition.addAction(self.actionStartAcquisition)
         self.menuAcquisition.addAction(self.actionStopAcquisition)
         self.menuAcquisition.addSeparator()
-        self.menuExperiment.addAction(self.actionManageExperiment)
-        self.menuExperiment.addSeparator()
-        self.menuExperiment.addAction(self.actionStartExperiment)
-        self.menuExperiment.addAction(self.actionStopExperiment)
-        self.menuExperiment.addAction(self.actionSkipToNext)
+        self.menuAutomation.addAction(self.actionManageAutomation)
+        self.menuAutomation.addSeparator()
+        self.menuAutomation.addAction(self.actionStartAutomation)
+        self.menuAutomation.addAction(self.actionStopAutomation)
+        self.menuAutomation.addAction(self.actionSkipToNext)
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addAction(self.actionHelp)
 
@@ -324,7 +324,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MSMS", None))
         self.actionSelectDevices.setText(QCoreApplication.translate("MainWindow", u"select devices", None))
-        self.actionManageExperiment.setText(QCoreApplication.translate("MainWindow", u"manage experiment", None))
+        self.actionManageAutomation.setText(QCoreApplication.translate("MainWindow", u"manage automation", None))
         self.actionExport.setText(QCoreApplication.translate("MainWindow", u"export", None))
         self.actionRestoreLastFile.setText(QCoreApplication.translate("MainWindow", u"restore last file", None))
         self.actionStartAcquisition.setText(QCoreApplication.translate("MainWindow", u"start acquisition", None))
@@ -335,8 +335,8 @@ class Ui_MainWindow(object):
         self.actionInterval_1_0s.setText(QCoreApplication.translate("MainWindow", u"1.0 s", None))
         self.actionInterval_2_0s.setText(QCoreApplication.translate("MainWindow", u"2.0 s", None))
         self.actionInterval_5_0s.setText(QCoreApplication.translate("MainWindow", u"5.0 s", None))
-        self.actionStartExperiment.setText(QCoreApplication.translate("MainWindow", u"start experiment", None))
-        self.actionStopExperiment.setText(QCoreApplication.translate("MainWindow", u"stop experiment", None))
+        self.actionStartAutomation.setText(QCoreApplication.translate("MainWindow", u"start automation", None))
+        self.actionStopAutomation.setText(QCoreApplication.translate("MainWindow", u"stop automation", None))
         self.actionSkipToNext.setText(QCoreApplication.translate("MainWindow", u"skip to next step", None))
         self.actionQuit.setText(QCoreApplication.translate("MainWindow", u"quit", None))
         self.actionAbout.setText(QCoreApplication.translate("MainWindow", u"about", None))
@@ -351,7 +351,7 @@ class Ui_MainWindow(object):
         self.rampLabel.setText(QCoreApplication.translate("MainWindow", u" Ramp rate", None))
         self.setPointValue.setText(QCoreApplication.translate("MainWindow", u"350.0K", None))
         self.rampValue.setText(QCoreApplication.translate("MainWindow", u"0.1K/s", None))
-        self.experimentPlanTextEdit.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+        self.automationPlanTextEdit.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "hr { height: 1px; border-width: 0; }\n"
@@ -359,7 +359,7 @@ class Ui_MainWindow(object):
 "li.checked::marker { content: \"\\2612\"; }\n"
 "</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None))
-        self.experimentPlanTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Experiment status.", None))
+        self.automationPlanTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Automation status.", None))
         self.commentPlainTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"You can write CSV header here at any time before the export. Also, you can double click to use a template.", None))
         self.autoFollowCheckBox.setText(QCoreApplication.translate("MainWindow", u"Follow", None))
         self.xAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"X: time", None))
@@ -379,7 +379,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuDevices.setTitle(QCoreApplication.translate("MainWindow", u"Devices", None))
         self.menuAcquisition.setTitle(QCoreApplication.translate("MainWindow", u"Acquisition", None))
-        self.menuExperiment.setTitle(QCoreApplication.translate("MainWindow", u"Experiment", None))
+        self.menuAutomation.setTitle(QCoreApplication.translate("MainWindow", u"Automation", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
 

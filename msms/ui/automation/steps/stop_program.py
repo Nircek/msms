@@ -3,21 +3,21 @@
 import logging
 from typing import TYPE_CHECKING
 
-from msms.ui.experiment.register_step import register_step
-from msms.ui.experiment.step_base import Step
+from msms.ui.automation.register_step import register_step
+from msms.ui.automation.step_base import Step
 
 if TYPE_CHECKING:
     from PySide6 import QtWidgets
 
     from msms.ui.controllers.app_controller import ApplicationController
-    from msms.ui.managers.experiment_manager import ExperimentManager
+    from msms.ui.managers.automation_manager import AutomationManager
 
 logger = logging.getLogger(__name__)
 
 
 @register_step("Stop Program")
 class StopProgramStep(Step):
-    """Stop the experiment program execution."""
+    """Stop the automation program execution."""
 
     def __init__(self, step_id: str) -> None:
         """Initialize step to stop program execution.
@@ -35,10 +35,10 @@ class StopProgramStep(Step):
         """No configuration needed for stop step."""
         return True
 
-    def on_start(self, _runner: ExperimentManager) -> None:  # noqa: PLR6301
-        """Request experiment to stop."""
+    def on_start(self, _runner: AutomationManager) -> None:  # noqa: PLR6301
+        """Request automation to stop."""
         logger.info("Stop program step activated")
 
-    def evaluate(self, _runner: ExperimentManager) -> bool:  # noqa: PLR6301
-        """Complete immediately, triggering experiment stop."""
+    def evaluate(self, _runner: AutomationManager) -> bool:  # noqa: PLR6301
+        """Complete immediately, triggering automation stop."""
         return True

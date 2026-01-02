@@ -112,7 +112,7 @@ class CsvPersistenceService:
         self.csv_file_writer.writerow(row)
 
     def set_description(self, description: str) -> None:
-        """Persist experiment description to a text file."""
+        """Persist automation description to a text file."""
         if not self._is_active:
             logger.error("Cannot set description: persistence not active")
             return
@@ -208,14 +208,14 @@ class CsvPersistenceService:
         self,
         export_path: Path,
         columns: list[str] | None = None,
-        experiment_log: list[tuple[str, str, datetime | None]] | None = None,
+        automation_log: list[tuple[str, str, datetime | None]] | None = None,
     ) -> None:
         """Export current CSV data to a user-provided path.
 
         Args:
             export_path: Destination path for export.
             columns: Optional column filter.
-            experiment_log: Optional experiment log entries (step_id, label, timestamp).
+            automation_log: Optional automation log entries (step_id, label, timestamp).
         """
         if self.csv_file is not None:
             self.csv_file.flush()
@@ -235,10 +235,10 @@ class CsvPersistenceService:
             # Write description
             outfile.write("\n".join(f"# {line}" for line in self.description.splitlines()) + "\n")
 
-            # Write experiment log if provided
-            if experiment_log:
-                outfile.write("#\n# Experiment Log:\n")
-                for step_id, label, timestamp in experiment_log:
+            # Write automation log if provided
+            if automation_log:
+                outfile.write("#\n# Automation Log:\n")
+                for step_id, label, timestamp in automation_log:
                     if timestamp is not None:
                         ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
                         outfile.write(f"# {step_id}: {label} (started: {ts_str})\n")

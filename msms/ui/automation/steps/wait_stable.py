@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 from PySide6 import QtWidgets
 
+from msms.ui.automation.register_step import register_step
+from msms.ui.automation.step_base import Step
 from msms.ui.dialogs.step_config_dialogs import WaitForStableDialog
-from msms.ui.experiment.register_step import register_step
-from msms.ui.experiment.step_base import Step
 
 if TYPE_CHECKING:
     from msms.ui.controllers.app_controller import ApplicationController
-    from msms.ui.managers.experiment_manager import ExperimentManager
+    from msms.ui.managers.automation_manager import AutomationManager
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class WaitForStableStep(Step):
         self._recent_values = deque(maxlen=self.num_points)
         return True
 
-    def evaluate(self, runner: ExperimentManager) -> bool:
+    def evaluate(self, runner: AutomationManager) -> bool:
         """Check if column is stable via linear regression.
 
         Returns True only if recent measurements show |slope| <= max_slope.

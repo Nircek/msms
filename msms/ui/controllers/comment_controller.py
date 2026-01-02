@@ -20,7 +20,7 @@ class DoubleClickPlainTextEdit(QtWidgets.QPlainTextEdit):
 
 
 class CommentController(QtCore.QObject):
-    """Manage experiment description/comment editing."""
+    """Manage automation description/comment editing."""
 
     description_changed = QtCore.Signal(object)
 

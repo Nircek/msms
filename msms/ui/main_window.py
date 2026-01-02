@@ -6,14 +6,14 @@ from git import Repo
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from msms.ui.controllers.app_controller import ApplicationController
+from msms.ui.controllers.automation_controller import AutomationController
 from msms.ui.controllers.comment_controller import CommentController
 from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
-from msms.ui.controllers.experiment_controller import ExperimentController
 from msms.ui.controllers.plot_controller import PlotController
 from msms.ui.dialogs import (
+    AutomationDialog,
     DeviceCommandDialog,
     DeviceSelectionDialog,
-    ExperimentDialog,
     MarkdownViewerDialog,
 )
 from msms.ui.ui_main_window import Ui_MainWindow
@@ -42,10 +42,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     storage_session_start_requested = QtCore.Signal()
     storage_stop_requested = QtCore.Signal()
 
-    # Experiment signals
-    experiment_start_requested = QtCore.Signal()
-    experiment_stop_requested = QtCore.Signal()
-    experiment_skip_forward_requested = QtCore.Signal()
+    # Automation signals
+    automation_start_requested = QtCore.Signal()
+    automation_stop_requested = QtCore.Signal()
+    automation_skip_forward_requested = QtCore.Signal()
 
     def center_on_screen(self) -> None:
         """Move the window to the center of the primary screen."""
@@ -81,11 +81,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 set_point_label=self.setPointValue,
                 ramp_label=self.rampValue,
                 variables_text=self.variablesTextEdit,
-                status_layout=self.experimentStatusLayoutWidget,
+                status_layout=self.automationStatusLayoutWidget,
             )
         )
-        self.experiment_controller = ExperimentController(
-            experiment_plan_text=self.experimentPlanTextEdit,
+        self.automation_controller = AutomationController(
+            automation_plan_text=self.automationPlanTextEdit,
             app_controller=self.app_controller,
         )
         self.comment_controller = CommentController(
@@ -148,13 +148,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.device_selection_requested.emit(selected_addresses)
 
     @QtCore.Slot()
-    def on_actionManageExperiment_triggered(self) -> None:
-        """Show experiment management dialog."""
+    def on_actionManageAutomation_triggered(self) -> None:
+        """Show automation management dialog."""
         if not self._selected_device_addresses:
             QtWidgets.QMessageBox.warning(
                 self,
                 "No Devices Selected",
-                "Please select devices first using Devices → Select Devices before managing experiments.",
+                "Please select devices first using Devices → Select Devices before managing automation.",
             )
             return
 
@@ -163,11 +163,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             QtWidgets.QMessageBox.warning(
                 self,
                 "No Data Columns Available",
-                "Please start acquisition first to initialize data columns before managing experiments.",
+                "Please start acquisition first to initialize data columns before managing automation.",
             )
             return
 
-        dialog = ExperimentDialog(self, app_controller=self.app_controller)
+        dialog = AutomationDialog(self, app_controller=self.app_controller)
         dialog.exec()
 
     @QtCore.Slot()
@@ -226,9 +226,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Stop device acquisition."""
         logger.info("Stopping device manager")
         self.device_acquisition_stop_requested.emit()
-        # Also stop experiment if running
-        if self.app_controller.managers.experiment.is_running:
-            self.experiment_stop_requested.emit()
+        # Also stop automation if running
+        if self.app_controller.managers.automation.is_running:
+            self.automation_stop_requested.emit()
 
     @QtCore.Slot()
     def on_actionSendDeviceCommand_triggered(self) -> None:
@@ -270,29 +270,29 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         QtWidgets.QMessageBox.warning(self, "Export Failed", message)
 
     @QtCore.Slot()
-    def on_actionStartExperiment_triggered(self) -> None:
-        """Start experiment execution."""
-        # Check if experiment plan exists by checking execution log
-        if not self.app_controller.managers.experiment.get_execution_log():
+    def on_actionStartAutomation_triggered(self) -> None:
+        """Start automation execution."""
+        # Check if automation plan exists by checking execution log
+        if not self.app_controller.managers.automation.get_execution_log():
             QtWidgets.QMessageBox.warning(
                 self,
-                "No Experiment Plan",
-                "Please create an experiment plan first using Experiment → Manage Experiment.",
+                "No Automation Plan",
+                "Please create an automation plan first using Automation → Manage Automation.",
             )
             return
-        self.experiment_start_requested.emit()
-        logger.info("Experiment started")
+        self.automation_start_requested.emit()
+        logger.info("Automation started")
 
     @QtCore.Slot()
-    def on_actionStopExperiment_triggered(self) -> None:
-        """Stop experiment execution."""
-        self.experiment_stop_requested.emit()
-        logger.info("Experiment stopped")
+    def on_actionStopAutomation_triggered(self) -> None:
+        """Stop automation execution."""
+        self.automation_stop_requested.emit()
+        logger.info("Automation stopped")
 
     @QtCore.Slot()
     def on_actionSkipToNext_triggered(self) -> None:
-        """Skip to next step in experiment."""
-        self.experiment_skip_forward_requested.emit()
+        """Skip to next step in automation."""
+        self.automation_skip_forward_requested.emit()
         logger.info("Skipped to next step")
 
     @QtCore.Slot()

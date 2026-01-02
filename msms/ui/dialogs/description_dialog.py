@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class DescriptionDialog(QtWidgets.QDialog):
-    """Dialog for creating structured experiment descriptions with predefined sections."""
+    """Dialog for creating structured automation descriptions with predefined sections."""
 
     def __init__(self, parent: QtWidgets.QWidget | None = None, initial_text: str = "") -> None:
         """Initialize the description dialog.
@@ -21,7 +21,7 @@ class DescriptionDialog(QtWidgets.QDialog):
             initial_text: Initial description text to parse and populate fields.
         """
         super().__init__(parent)
-        self.setWindowTitle("Experiment Description")
+        self.setWindowTitle("Automation Description")
         self.setMinimumWidth(600)
         self.setMinimumHeight(500)
 
@@ -311,6 +311,6 @@ class DescriptionDialog(QtWidgets.QDialog):
             sections.append(f"## Additional Notes\n{notes}")
 
         if not sections:
-            return "# Experiment Description\n\n(No information provided)"
+            return "# Automation Description\n\n(No information provided)"
 
-        return "# Experiment Description\n\n" + "\n\n".join(sections)
+        return "# Automation Description\n\n" + "\n\n".join(sections)
