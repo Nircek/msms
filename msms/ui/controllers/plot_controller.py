@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 import pyqtgraph as pg  # type: ignore
@@ -8,8 +8,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 
 if TYPE_CHECKING:
-    from pyqtgraph.graphicsItems.ViewBox.ViewBox import ViewBox  # type: ignore
-
     from msms.ui.managers import DataRepository
 
 logger = logging.getLogger(__name__)
@@ -62,10 +60,8 @@ class PlotController(QtCore.QObject):
 
         self._last_user_xrange: list[float] | None = None
         self._last_user_yrange: list[float] | None = None
-        self._programmatic_update = False
 
-        self.plot_widget.sigXRangeChanged.connect(self._on_x_range_changed)
-        self.plot_widget.sigYRangeChanged.connect(self._on_y_range_changed)
+        self.plot_widget.sigRangeChanged.connect(self._on_range_changed)
         self.auto_follow_checkbox.toggled.connect(self._on_auto_follow_toggled)
         self.chart_config_button.clicked.connect(self._on_chart_config_clicked)
 
@@ -192,50 +188,14 @@ class PlotController(QtCore.QObject):
         self.ys = data[:, y_idx]
         self.plot_item.setData(self.xs, self.ys)
 
-        if self.auto_follow_checkbox.isChecked() and self.xs.size > 0:
-            self._update_auto_follow_view()
-        else:
-            self._restore_user_view()
-
-    def _update_auto_follow_view(self) -> None:
-        """Pan chart to show latest samples."""
-        if self.xs.size > 0:
-            new_xrange = [self.xs[0], self.xs[-1]]
-
-            self._programmatic_update = True
-            self.plot_widget.setXRange(new_xrange[0], new_xrange[1], padding=0)
-            self._last_user_xrange = new_xrange
-
-            self.plot_widget.enableAutoRange(axis=pg.ViewBox.YAxis, enable=True)
-            # Keep _programmatic_update flag set briefly to catch Y auto-range changes
-            QtCore.QTimer.singleShot(150, lambda: setattr(self, "_programmatic_update", False))
-
-    def _restore_user_view(self) -> None:
-        """Restore user's manual view range."""
-        if self._last_user_xrange is not None:
-            self._programmatic_update = True
-            self.plot_widget.setXRange(self._last_user_xrange[0], self._last_user_xrange[1], padding=0)
-            self._programmatic_update = False
-        self.plot_widget.enableAutoRange(axis=pg.ViewBox.YAxis, enable=False)
-
-    def _on_x_range_changed(self, _view_box: ViewBox, range_: list[float]) -> None:
-        """Track manual X range changes."""
-        if self._programmatic_update:
-            return
-        self.auto_follow_checkbox.setChecked(False)
-        self._last_user_xrange = [clamp_to_float_precision(range_[0]), clamp_to_float_precision(range_[1])]
-
-    def _on_y_range_changed(self, _view_box: ViewBox, range_: list[float]) -> None:
-        """Track manual Y range changes."""
-        if self._programmatic_update:
-            return
-        self.auto_follow_checkbox.setChecked(False)
-        self._last_user_yrange = [clamp_to_float_precision(range_[0]), clamp_to_float_precision(range_[1])]
+    def _on_range_changed(self, *_args: list[Any]) -> None:
+        if self.auto_follow_checkbox.isChecked() and not all(self.plot_widget.getViewBox().autoRangeEnabled()):
+            self.auto_follow_checkbox.blockSignals(True)
+            self.auto_follow_checkbox.setChecked(False)
+            self.auto_follow_checkbox.blockSignals(False)
 
     def _on_auto_follow_toggled(self, checked: bool) -> None:
-        logger.info("Auto-follow toggled: %s", checked)
-        if checked and self.xs.size > 0:
-            self._update_auto_follow_view()
+        self.plot_widget.getViewBox().enableAutoRange(enable=checked)
 
     @QtCore.Slot()
     def _on_chart_config_clicked(self) -> None:
