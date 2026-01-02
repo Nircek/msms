@@ -134,10 +134,13 @@ class CsvPersistenceService:
             index = csv_files.index(self.csv_file_path.stem)
         except ValueError:
             return None
-        if index > 0:
+        if index != len(csv_files) - 1:
+            last_file_stem = csv_files[-1]
+        elif index >= 0:
             last_file_stem = csv_files[index - 1]
-            return get_logs_file_path(self.data_suffix, last_file_stem)
-        return None
+        else:
+            return None
+        return get_logs_file_path(self.data_suffix, last_file_stem)
 
     def resolve_restore_target(self, candidate: Path | None) -> Path | None:
         """Resolve the path that should be used for restoring a session.
@@ -170,7 +173,11 @@ class CsvPersistenceService:
 
         dataframe = pd.read_csv(csv_path, comment="#")
         columns = list(dataframe.columns)
-        last_row = dataframe.iloc[-1].astype("string").to_dict() if not dataframe.empty else {}
+        last_row_dict: dict[str, str] = {}
+        if not dataframe.empty:
+            last_row_series = dataframe.iloc[-1].astype("string")
+            last_row_dict = {str(k): str(v) for k, v in last_row_series.to_dict().items()}
+
         timestamp_value = 0.0
         if not dataframe.empty and "timestamp" in dataframe.columns:
             first_row_value = dataframe.iloc[0]["timestamp"]
@@ -191,7 +198,7 @@ class CsvPersistenceService:
             columns=columns,
             numeric_columns=numeric_columns,
             numeric_rows=numeric_rows,
-            last_row=last_row,
+            last_row=last_row_dict,
             description=description_text,
             timestamp_zero=timestamp_value,
             row_count=row_count,

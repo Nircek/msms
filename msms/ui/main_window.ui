@@ -32,6 +32,9 @@
     </property>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1,0">
+      <property name="spacing">
+       <number>8</number>
+      </property>
       <item>
        <layout class="QVBoxLayout" name="leftPane" stretch="0,0,0,0">
         <property name="spacing">
@@ -265,7 +268,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <widget class="PlotWidget" name="plotWidget" native="true"/>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="chartConfig" stretch="0,1">
+         <layout class="QHBoxLayout" name="chartConfig" stretch="0,1,1">
           <property name="spacing">
            <number>16</number>
           </property>
@@ -280,7 +283,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="chartConfigPushButton">
+           <widget class="QPushButton" name="xAxisPushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -288,7 +291,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
              </sizepolicy>
             </property>
             <property name="text">
-             <string>CHART</string>
+             <string>X: time</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="yAxisPushButton">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Y: value</string>
             </property>
            </widget>
           </item>
@@ -371,16 +387,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="actionSelectDevices"/>
     <addaction name="actionSendDeviceCommand"/>
    </widget>
-   <widget class="QMenu" name="menuSetInterval">
-    <property name="title">
-     <string>Set Interval</string>
-    </property>
-    <addaction name="actionInterval_0_1s"/>
-    <addaction name="actionInterval_0_5s"/>
-    <addaction name="actionInterval_1_0s"/>
-    <addaction name="actionInterval_2_0s"/>
-    <addaction name="actionInterval_5_0s"/>
-   </widget>
    <widget class="QMenu" name="menuAcquisition">
     <property name="title">
      <string>Acquisition</string>
@@ -388,7 +394,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="actionStartAcquisition"/>
     <addaction name="actionStopAcquisition"/>
     <addaction name="separator"/>
-    <addaction name="menuSetInterval"/>
    </widget>
    <widget class="QMenu" name="menuExperiment">
     <property name="title">

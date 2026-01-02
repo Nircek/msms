@@ -66,7 +66,11 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self._selected_device_addresses: list[str] = []
 
         self.plot_controller = PlotController(
-            self.plotWidget, self.autoFollowCheckBox, self.chartConfigPushButton, self.app_controller.data_repository
+            self.plotWidget,
+            self.autoFollowCheckBox,
+            self.xAxisPushButton,
+            self.yAxisPushButton,
+            self.app_controller.data_repository,
         )
         self.display_controller = DisplayController(
             DisplayWidgets(

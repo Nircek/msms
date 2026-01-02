@@ -24,18 +24,21 @@ class PlotController(QtCore.QObject):
         self,
         plot_widget: pg.PlotWidget,
         auto_follow_checkbox: QtWidgets.QCheckBox,
-        chart_config_button: QtWidgets.QPushButton,
+        x_axis_button: QtWidgets.QPushButton,
+        y_axis_button: QtWidgets.QPushButton,
         data_repository: DataRepository,
     ) -> None:
         super().__init__()
         self.plot_widget = plot_widget
         self.auto_follow_checkbox = auto_follow_checkbox
-        self.chart_config_button = chart_config_button
+        self.x_axis_button = x_axis_button
+        self.y_axis_button = y_axis_button
         self.data_repository = data_repository
 
         # Column selection state
-        self.chart_columns = ["time", "number", "dt"]
-        self.current_chart_column = "timestamp"
+        self.chart_columns: list[str] = []
+        self.x_column = "time"
+        self.y_column = "timestamp"
 
         # Detect system theme and configure colors
         is_dark_theme = self._is_dark_theme()
@@ -54,7 +57,6 @@ class PlotController(QtCore.QObject):
             symbolPen=None,
         )
 
-        self.current_column = "timestamp"
         self.xs = np.array([])
         self.ys = np.array([])
 
@@ -63,7 +65,10 @@ class PlotController(QtCore.QObject):
 
         self.plot_widget.sigRangeChanged.connect(self._on_range_changed)
         self.auto_follow_checkbox.toggled.connect(self._on_auto_follow_toggled)
-        self.chart_config_button.clicked.connect(self._on_chart_config_clicked)
+        self.x_axis_button.clicked.connect(self._on_x_axis_button_clicked)
+        self.y_axis_button.clicked.connect(self._on_y_axis_button_clicked)
+
+        self.on_columns_change([])
 
         # Connect to OS theme changes (Qt 6.5+)
         self._connect_theme_change_signal()
@@ -127,11 +132,8 @@ class PlotController(QtCore.QObject):
         self.plot_widget.getPlotItem().getAxis("bottom").setTextPen(text_color)
         self.plot_widget.getPlotItem().getAxis("left").setTextPen(text_color)
 
-        # Set title and labels with appropriate colors
-        self.plot_widget.setTitle("Temperature vs Time", color=text_color, size="14pt")
-        label_styles = {"color": text_color, "font-size": "12pt"}
-        self.plot_widget.setLabel("left", "Temperature (°C)", **label_styles)
-        self.plot_widget.setLabel("bottom", "Sample Index", color=text_color)
+        # Initial title and labels (will be updated when columns change)
+        self._update_plot_labels(text_color)
 
     def _connect_theme_change_signal(self) -> None:
         """Connect to OS theme change signal."""
@@ -167,21 +169,17 @@ class PlotController(QtCore.QObject):
         # Refresh the plot to apply changes
         self.plot_item.setData(self.xs, self.ys)
 
-    def set_column(self, column: str) -> None:
-        logger.info("Plot column changed to: %s", column)
-        self.current_column = column
-
     def refresh_data_from_repository(self) -> None:
         """Update plot data from repository."""
         columns = list(self.data_repository.columns or [])
         data = self.data_repository.data
 
-        if data.shape == () or "time" not in columns or self.current_column not in columns:
+        if data.shape == () or self.x_column not in columns or self.y_column not in columns:
             self.plot_item.setData([], [])
             return
 
-        x_idx = columns.index("time")
-        y_idx = columns.index(self.current_column)
+        x_idx = columns.index(self.x_column)
+        y_idx = columns.index(self.y_column)
 
         logger.debug("Refreshing plot with %d samples", data.shape[0])
         self.xs = data[:, x_idx]
@@ -198,28 +196,82 @@ class PlotController(QtCore.QObject):
         self.plot_widget.getViewBox().enableAutoRange(enable=checked)
 
     @QtCore.Slot()
-    def _on_chart_config_clicked(self) -> None:
-        """Display column selection menu for the main chart."""
+    def _on_x_axis_button_clicked(self) -> None:
+        """Display X-axis column selection menu."""
+        if not self.chart_columns:
+            return
         menu = QtWidgets.QMenu()
         for column in self.chart_columns:
             action = menu.addAction(column)
             assert action is not None
             action.setCheckable(True)
-            action.setChecked(column == self.current_chart_column)
-            action.triggered.connect(lambda _checked=None, col=column: self._set_chart_column(col))
+            action.setChecked(column == self.x_column)
+            action.triggered.connect(lambda _checked=None, col=column: self._set_x_column(col))
         menu.exec(QtGui.QCursor.pos())
 
-    def _set_chart_column(self, column: str) -> None:
-        """Update selected chart column and refresh display."""
-        self.current_chart_column = column
-        self.chart_config_button.setText(f"CHART: {column}")
-        self.set_column(column)
+    @QtCore.Slot()
+    def _on_y_axis_button_clicked(self) -> None:
+        """Display Y-axis column selection menu."""
+        if not self.chart_columns:
+            return
+        menu = QtWidgets.QMenu()
+        for column in self.chart_columns:
+            action = menu.addAction(column)
+            assert action is not None
+            action.setCheckable(True)
+            action.setChecked(column == self.y_column)
+            action.triggered.connect(lambda _checked=None, col=column: self._set_y_column(col))
+        menu.exec(QtGui.QCursor.pos())
+
+    def _set_x_column(self, column: str) -> None:
+        """Update X-axis column and refresh display."""
+        self.x_column = column
+        self._update_button_text()
+        self._update_plot_labels()
         self.refresh_data_from_repository()
+
+    def _set_y_column(self, column: str) -> None:
+        """Update Y-axis column and refresh display."""
+        self.y_column = column
+        self._update_button_text()
+        self._update_plot_labels()
+        self.refresh_data_from_repository()
+
+    def _update_button_text(self) -> None:
+        """Update axis buttons with current selections."""
+        self.x_axis_button.setText(f"X: {self.x_column}")
+        self.y_axis_button.setText(f"Y: {self.y_column}")
+
+    def _update_plot_labels(self, text_color: str | None = None) -> None:
+        """Update plot title and axis labels based on selected columns."""
+        if text_color is None:
+            # Determine text color from current theme
+            is_dark = self._is_dark_theme()
+            text_color = "#e0e0e0" if is_dark else "#000000"
+
+        # Update title
+        self.plot_widget.setTitle(f"{self.y_column} vs {self.x_column}", color=text_color, size="14pt")
+
+        # Update axis labels
+        label_styles = {"color": text_color, "font-size": "12pt"}
+        self.plot_widget.setLabel("left", self.y_column, **label_styles)
+        self.plot_widget.setLabel("bottom", self.x_column, **label_styles)
 
     @QtCore.Slot(object)
     def on_columns_change(self, columns: list[str]) -> None:
         """Handle notification that numeric chart columns have changed."""
         self.chart_columns = columns
-        if self.current_chart_column not in self.chart_columns and self.chart_columns:
-            self.current_chart_column = self.chart_columns[0]
-            self.chart_config_button.setText(f"CHART: {self.current_chart_column}")
+        columns_does_not_exist = not bool(self.chart_columns)
+        self.x_axis_button.setDisabled(columns_does_not_exist)
+        self.y_axis_button.setDisabled(columns_does_not_exist)
+        if columns_does_not_exist:
+            return
+
+        if self.x_column not in self.chart_columns:
+            self.x_column = "time"
+
+        if self.y_column not in self.chart_columns:
+            self.y_column = next((c for c in self.chart_columns if c != self.x_column), "time")
+
+        self._update_button_text()
+        self._update_plot_labels()

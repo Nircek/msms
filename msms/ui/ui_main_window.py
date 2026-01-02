@@ -81,6 +81,7 @@ class Ui_MainWindow(object):
         self._2.setObjectName(u"_2")
         self._2.setContentsMargins(0, 4, 0, 4)
         self.horizontalLayout = QHBoxLayout()
+        self.horizontalLayout.setSpacing(8)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.leftPane = QVBoxLayout()
         self.leftPane.setSpacing(0)
@@ -229,17 +230,25 @@ class Ui_MainWindow(object):
 
         self.chartConfig.addWidget(self.autoFollowCheckBox)
 
-        self.chartConfigPushButton = QPushButton(self.centralWidget)
-        self.chartConfigPushButton.setObjectName(u"chartConfigPushButton")
+        self.xAxisPushButton = QPushButton(self.centralWidget)
+        self.xAxisPushButton.setObjectName(u"xAxisPushButton")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.chartConfigPushButton.sizePolicy().hasHeightForWidth())
-        self.chartConfigPushButton.setSizePolicy(sizePolicy)
+        sizePolicy.setHeightForWidth(self.xAxisPushButton.sizePolicy().hasHeightForWidth())
+        self.xAxisPushButton.setSizePolicy(sizePolicy)
 
-        self.chartConfig.addWidget(self.chartConfigPushButton)
+        self.chartConfig.addWidget(self.xAxisPushButton)
+
+        self.yAxisPushButton = QPushButton(self.centralWidget)
+        self.yAxisPushButton.setObjectName(u"yAxisPushButton")
+        sizePolicy.setHeightForWidth(self.yAxisPushButton.sizePolicy().hasHeightForWidth())
+        self.yAxisPushButton.setSizePolicy(sizePolicy)
+
+        self.chartConfig.addWidget(self.yAxisPushButton)
 
         self.chartConfig.setStretch(1, 1)
+        self.chartConfig.setStretch(2, 1)
 
         self.centerPane.addLayout(self.chartConfig)
 
@@ -278,8 +287,6 @@ class Ui_MainWindow(object):
         self.menuFile.setObjectName(u"menuFile")
         self.menuDevices = QMenu(self.menuBar)
         self.menuDevices.setObjectName(u"menuDevices")
-        self.menuSetInterval = QMenu(self.menuBar)
-        self.menuSetInterval.setObjectName(u"menuSetInterval")
         self.menuAcquisition = QMenu(self.menuBar)
         self.menuAcquisition.setObjectName(u"menuAcquisition")
         self.menuExperiment = QMenu(self.menuBar)
@@ -300,15 +307,9 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionQuit)
         self.menuDevices.addAction(self.actionSelectDevices)
         self.menuDevices.addAction(self.actionSendDeviceCommand)
-        self.menuSetInterval.addAction(self.actionInterval_0_1s)
-        self.menuSetInterval.addAction(self.actionInterval_0_5s)
-        self.menuSetInterval.addAction(self.actionInterval_1_0s)
-        self.menuSetInterval.addAction(self.actionInterval_2_0s)
-        self.menuSetInterval.addAction(self.actionInterval_5_0s)
         self.menuAcquisition.addAction(self.actionStartAcquisition)
         self.menuAcquisition.addAction(self.actionStopAcquisition)
         self.menuAcquisition.addSeparator()
-        self.menuAcquisition.addAction(self.menuSetInterval.menuAction())
         self.menuExperiment.addAction(self.actionManageExperiment)
         self.menuExperiment.addSeparator()
         self.menuExperiment.addAction(self.actionStartExperiment)
@@ -364,7 +365,8 @@ class Ui_MainWindow(object):
         self.experimentPlanTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Experiment status.", None))
         self.commentPlainTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"You can write CSV header here at any time before the export. Also, you can use a template in File->Describe", None))
         self.autoFollowCheckBox.setText(QCoreApplication.translate("MainWindow", u"Follow", None))
-        self.chartConfigPushButton.setText(QCoreApplication.translate("MainWindow", u"CHART", None))
+        self.xAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"X: time", None))
+        self.yAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"Y: value", None))
         self.variablesTextEdit.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><meta charset=\"utf-8\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
@@ -379,7 +381,6 @@ class Ui_MainWindow(object):
                         "0; text-indent:0px;\">1.3333e-7</p></body></html>", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
         self.menuDevices.setTitle(QCoreApplication.translate("MainWindow", u"Devices", None))
-        self.menuSetInterval.setTitle(QCoreApplication.translate("MainWindow", u"Set Interval", None))
         self.menuAcquisition.setTitle(QCoreApplication.translate("MainWindow", u"Acquisition", None))
         self.menuExperiment.setTitle(QCoreApplication.translate("MainWindow", u"Experiment", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
