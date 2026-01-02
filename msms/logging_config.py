@@ -1,14 +1,26 @@
+import inspect
 import logging
 import logging.handlers
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 
+import msms
+
 init_timestamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
-logs_dir = Path("logs")
+
+
+def setup_correct_cwd() -> None:
+    """Set current working directory to the parent of the module."""
+    module_path = Path(inspect.getfile(msms)).resolve()
+    assert str(module_path).endswith("/msms/__init__.py"), module_path
+    parent_of_module = module_path.parent.parent
+    os.chdir(parent_of_module)
 
 
 def get_logs_file_path(suffix: str, prefix: str | None = None) -> Path:
     """Generate timestamped log file path."""
+    logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
     if prefix is None:
         prefix = f"msms_{init_timestamp}"
@@ -16,8 +28,9 @@ def get_logs_file_path(suffix: str, prefix: str | None = None) -> Path:
     return logs_dir / file_name
 
 
-def setup_logging(log_level: int = logging.DEBUG) -> None:
+def setup_logging(log_level: int = logging.INFO) -> None:
     """Configure root logger with console and rotating file handlers."""
+    setup_correct_cwd()
     log_file_path = get_logs_file_path(".log")
 
     formatter = logging.Formatter(
