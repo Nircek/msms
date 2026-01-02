@@ -161,6 +161,15 @@ devices:
       - q: "READ?"
         r: "{RANDOM(0.0, 10.0, 1):.5f}"
 
+  UNKNOWN_DEVICE:
+    eom:
+      ASRL INSTR:
+        q: "\r\n"
+        r: "\r\n"
+    dialogues:
+      - q: "*IDN?"
+        r: "unknown,device,,"
+
 resources:
   ASRL1::INSTR:
     device: RSDM3055A
@@ -168,3 +177,5 @@ resources:
     device: SR830
   ASRL3::INSTR:
     device: LSCI_MODEL330
+  ASRL4::INSTR:
+    device: UNKNOWN_DEVICE
