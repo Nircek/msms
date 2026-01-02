@@ -20,14 +20,11 @@ class ExperimentManager(QtCore.QObject):
     records start timestamp for each executed step.
     """
 
-    step_started = QtCore.Signal(object)
-    step_finished = QtCore.Signal(object)
-    experiment_completed = QtCore.Signal()
-    experiment_stopped = QtCore.Signal()
-    experiment_error = QtCore.Signal(str)
-    current_step_changed = QtCore.Signal(object)
     experiment_started = QtCore.Signal()
-    experiment_log_updated = QtCore.Signal(object)
+    experiment_stopped = QtCore.Signal()
+    experiment_completed = QtCore.Signal()
+    current_step_changed = QtCore.Signal(object)
+    experiment_log_changed = QtCore.Signal(object)
     device_command_requested = QtCore.Signal(object, object)
     steps_changed = QtCore.Signal(object)
 
@@ -118,12 +115,12 @@ class ExperimentManager(QtCore.QObject):
             self._current_index = 0
 
         logger.info("Experiment plan updated with %d steps", len(steps))
-        self.steps_changed.emit(list(self._steps))
+        self.steps_changed.emit(self._steps)
 
     @QtCore.Slot()
     def on_get_steps_request(self) -> None:
         """Emit current steps list."""
-        self.steps_changed.emit(list(self._steps))
+        self.steps_changed.emit(self._steps)
 
     @QtCore.Slot()
     def on_start_request(self) -> None:
@@ -144,10 +141,10 @@ class ExperimentManager(QtCore.QObject):
             self._timer.timeout.connect(self._evaluate_step)
 
         self._timer.setInterval(1000)
-        self._timer.start()
-
-        logger.info("Experiment started with %d steps", len(self._steps))
         self.experiment_started.emit()
+
+        self._timer.start()
+        logger.info("Experiment started with %d steps", len(self._steps))
         self._start_current_step()
 
     @QtCore.Slot()
@@ -164,7 +161,7 @@ class ExperimentManager(QtCore.QObject):
         self.experiment_stopped.emit()
 
     @QtCore.Slot()
-    def on_skip_forward_request(self) -> None:
+    def on_skip_step_request(self) -> None:
         """Skip to next step immediately."""
         if not self._is_running:
             logger.warning("Cannot skip when experiment is not running")
@@ -188,7 +185,6 @@ class ExperimentManager(QtCore.QObject):
         if self._is_running:
             self._evaluate_step()
 
-    @QtCore.Slot()
     def _start_current_step(self) -> None:
         """Initialize current step and record start timestamp."""
         current = self.current_step
@@ -205,7 +201,7 @@ class ExperimentManager(QtCore.QObject):
             logger.exception("Error in on_start for step: %s", current.label)
 
         self.current_step_changed.emit(current)
-        self.experiment_log_updated.emit(self.get_execution_log())
+        self.experiment_log_changed.emit(self.get_execution_log())
 
     def _evaluate_step(self) -> None:
         """Check if current step is complete and advance if needed."""
@@ -232,7 +228,6 @@ class ExperimentManager(QtCore.QObject):
 
             self._advance_to_next_step()
 
-    @QtCore.Slot()
     def _advance_to_next_step(self) -> None:
         """Move to next step in experiment plan."""
         self._current_index += 1
@@ -242,7 +237,6 @@ class ExperimentManager(QtCore.QObject):
         else:
             self._start_current_step()
 
-    @QtCore.Slot()
     def _complete_experiment(self) -> None:
         """Finalize experiment execution."""
         self._is_running = False

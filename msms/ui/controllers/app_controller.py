@@ -81,9 +81,6 @@ class ApplicationController(QtCore.QObject):
         self.device_manager_thread.start()
         self.experiment_manager_thread.start()
 
-        self._is_device_running = False
-        self.managers.device.acquisition_state_changed.connect(self._on_acquisition_state_changed)
-
         self._device_info_cache: dict[str, DiscoveredDevice] = {}
         self.managers.device.device_info_collected.connect(self._on_device_info_collected)
 
@@ -114,7 +111,7 @@ class ApplicationController(QtCore.QObject):
         # Experiment signals
         main_window.experiment_start_requested.connect(self.managers.experiment.on_start_request)
         main_window.experiment_stop_requested.connect(self.managers.experiment.on_stop_request)
-        main_window.experiment_skip_forward_requested.connect(self.managers.experiment.on_skip_forward_request)
+        main_window.experiment_skip_forward_requested.connect(self.managers.experiment.on_skip_step_request)
 
     def _connect_device_to_storage(self) -> None:
         """Connect device manager signals to storage manager slots."""
@@ -127,13 +124,8 @@ class ApplicationController(QtCore.QObject):
 
     def _connect_experiment_to_device(self) -> None:
         """Connect experiment manager signals to device manager slots."""
-        self.managers.experiment.experiment_log_updated.connect(self.managers.storage.on_experiment_log_update)
+        self.managers.experiment.experiment_log_changed.connect(self.managers.storage.on_experiment_log_update)
         self.managers.experiment.device_command_requested.connect(self.managers.device.on_device_command_request)
-
-    @property
-    def is_acquiring(self) -> bool:
-        """Check if device acquisition is currently running."""
-        return self._is_device_running
 
     @property
     def data_repository(self) -> DataRepository:
@@ -144,11 +136,6 @@ class ApplicationController(QtCore.QObject):
     def device_info_cache(self) -> dict[str, DiscoveredDevice]:
         """Provide read access to cached device info."""
         return self._device_info_cache
-
-    @QtCore.Slot(object)
-    def _on_acquisition_state_changed(self, running: bool) -> None:
-        """Track device acquisition state for shutdown logic."""
-        self._is_device_running = running
 
     @QtCore.Slot(object)
     def _on_device_info_collected(self, info: dict[str, DiscoveredDevice]) -> None:

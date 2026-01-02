@@ -11,13 +11,9 @@ class DeviceManager(QtCore.QObject):
     """Coordinate device discovery and periodic data polling using QTimer."""
 
     devices_discovered = QtCore.Signal(object)
-    device_connected = QtCore.Signal(object)
-    device_disconnected = QtCore.Signal(object)
-    device_error = QtCore.Signal(object, object)
     device_info_collected = QtCore.Signal(object)
     data_initialized = QtCore.Signal(object)
     data_collected = QtCore.Signal(object)
-    acquisition_state_changed = QtCore.Signal(bool)
 
     def __init__(self, interval_ms: int = 500) -> None:
         """Initialize the manager with a QTimer-based polling mechanism.
@@ -96,7 +92,6 @@ class DeviceManager(QtCore.QObject):
         self._is_running = True
         self._timer.setInterval(self._interval_ms)
         self._timer.start()
-        self.acquisition_state_changed.emit(True)
 
     def _poll_devices(self) -> None:
         """Collect data from devices (called by timer)."""
@@ -118,7 +113,6 @@ class DeviceManager(QtCore.QObject):
 
         self._repository.close()
 
-        self.acquisition_state_changed.emit(False)
         logger.info("Device acquisition stopped")
 
     @QtCore.Slot(object)
