@@ -5,7 +5,7 @@ from PySide6 import QtCore, QtWidgets
 
 if TYPE_CHECKING:
     from msms.ui.automation.step_base import Step
-    from msms.ui.controllers.app_controller import ApplicationController
+    from msms.ui.controllers import ApplicationController
 
 logger = logging.getLogger(__name__)
 

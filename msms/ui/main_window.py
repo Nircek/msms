@@ -5,11 +5,14 @@ import pyqtgraph as pg  # type: ignore
 from git import Repo
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from msms.ui.controllers.app_controller import ApplicationController
-from msms.ui.controllers.automation_controller import AutomationController
-from msms.ui.controllers.comment_controller import CommentController
-from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
-from msms.ui.controllers.plot_controller import PlotController
+from msms.ui.controllers import (
+    ApplicationController,
+    CommentController,
+    ControlsController,
+    DisplayController,
+    DisplayWidgets,
+    PlotController,
+)
 from msms.ui.dialogs import (
     AutomationDialog,
     DeviceCommandDialog,
@@ -72,6 +75,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.yAxisPushButton,
             self.app_controller.data_repository,
         )
+        self.controls_controller = ControlsController(
+            placeholder=self.controlsPlaceholder,
+            app_controller=self.app_controller,
+        )
         self.display_controller = DisplayController(
             DisplayWidgets(
                 time_label=self.timeValue,
@@ -81,12 +88,8 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 set_point_label=self.setPointValue,
                 ramp_label=self.rampValue,
                 variables_text=self.variablesTextEdit,
-                status_layout=self.automationStatusLayoutWidget,
+                status_layout=self.experimentStatusLayoutWidget,
             )
-        )
-        self.automation_controller = AutomationController(
-            automation_plan_text=self.automationPlanTextEdit,
-            app_controller=self.app_controller,
         )
         self.comment_controller = CommentController(
             comment_text_edit=self.commentPlainTextEdit,
@@ -104,6 +107,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         storage_manager.restore_failed.connect(self._on_restore_failed)
         storage_manager.export_completed.connect(self._on_export_completed)
         storage_manager.export_failed.connect(self._on_export_failed)
+
+        # Connect controls controller signals
+        self.controls_controller.device_selection_requested.connect(self._handle_device_selection)
+        self.controls_controller.acquisition_start_requested.connect(self.device_acquisition_start_requested.emit)
+        self.controls_controller.acquisition_stop_requested.connect(self.device_acquisition_stop_requested.emit)
+        self.controls_controller.automation_edit_requested.connect(self.on_actionManageAutomation_triggered)
+        self.controls_controller.automation_start_requested.connect(self.automation_start_requested.emit)
+        self.controls_controller.automation_stop_requested.connect(self.automation_stop_requested.emit)
+        self.controls_controller.automation_skip_requested.connect(self.automation_skip_forward_requested.emit)
 
         self.comment_controller.description_changed.connect(self.storage_description_change_requested.emit)
 
@@ -128,7 +140,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             self.storage_restore_requested.emit(None)
 
     @QtCore.Slot()
-    def on_actionSelectDevices_triggered(self) -> None:
+    def _handle_device_selection(self) -> None:
         """Show dialog for selecting devices to poll."""
         if self._selected_device_addresses:
             return
@@ -146,6 +158,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
             self._selected_device_addresses = selected_addresses
             self.device_selection_requested.emit(selected_addresses)
+
+            # Notify controls controller that devices were selected
+            self.controls_controller.on_devices_selected()
 
     @QtCore.Slot()
     def on_actionManageAutomation_triggered(self) -> None:
@@ -206,31 +221,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         QtWidgets.QMessageBox.about(self, "About MSMS", about_text)
 
     @QtCore.Slot()
-    def on_actionStartAcquisition_triggered(self) -> None:
-        """Start device acquisition."""
-        if not self._selected_device_addresses:
-            QtWidgets.QMessageBox.warning(
-                self,
-                "Select Devices",
-                "Select at least one device before starting acquisition.",
-            )
-            return
-
-        logger.info("Starting device manager with interval %d ms", self.app_controller.current_interval_ms)
-        self.device_interval_change_requested.emit(self.app_controller.current_interval_ms)
-        self.device_selection_requested.emit(self._selected_device_addresses)
-        self.device_acquisition_start_requested.emit()
-
-    @QtCore.Slot()
-    def on_actionStopAcquisition_triggered(self) -> None:
-        """Stop device acquisition."""
-        logger.info("Stopping device manager")
-        self.device_acquisition_stop_requested.emit()
-        # Also stop automation if running
-        if self.app_controller.managers.automation.is_running:
-            self.automation_stop_requested.emit()
-
-    @QtCore.Slot()
     def on_actionSendDeviceCommand_triggered(self) -> None:
         """Open device command dialog."""
         dialog = DeviceCommandDialog(self, self.app_controller)
@@ -268,32 +258,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     @QtCore.Slot(object)
     def _on_export_failed(self, message: str) -> None:
         QtWidgets.QMessageBox.warning(self, "Export Failed", message)
-
-    @QtCore.Slot()
-    def on_actionStartAutomation_triggered(self) -> None:
-        """Start automation execution."""
-        # Check if automation plan exists by checking execution log
-        if not self.app_controller.managers.automation.get_execution_log():
-            QtWidgets.QMessageBox.warning(
-                self,
-                "No Automation Plan",
-                "Please create an automation plan first using Automation → Manage Automation.",
-            )
-            return
-        self.automation_start_requested.emit()
-        logger.info("Automation started")
-
-    @QtCore.Slot()
-    def on_actionStopAutomation_triggered(self) -> None:
-        """Stop automation execution."""
-        self.automation_stop_requested.emit()
-        logger.info("Automation stopped")
-
-    @QtCore.Slot()
-    def on_actionSkipToNext_triggered(self) -> None:
-        """Skip to next step in automation."""
-        self.automation_skip_forward_requested.emit()
-        logger.info("Skipped to next step")
 
     @QtCore.Slot()
     def on_actionQuit_triggered(self) -> None:

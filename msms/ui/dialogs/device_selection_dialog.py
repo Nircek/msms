@@ -5,7 +5,7 @@ from PySide6 import QtCore, QtWidgets
 
 if typing.TYPE_CHECKING:
     from msms.connectivity.device_repository import DiscoveredDevice
-    from msms.ui.controllers.app_controller import ApplicationController
+    from msms.ui.controllers import ApplicationController
 
 logger = logging.getLogger(__name__)
 

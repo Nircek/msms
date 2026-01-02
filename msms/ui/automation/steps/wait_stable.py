@@ -12,7 +12,7 @@ from msms.ui.automation.step_base import Step
 from msms.ui.dialogs.step_config_dialogs import WaitForStableDialog
 
 if TYPE_CHECKING:
-    from msms.ui.controllers.app_controller import ApplicationController
+    from msms.ui.controllers import ApplicationController
     from msms.ui.managers.automation_manager import AutomationManager
 
 logger = logging.getLogger(__name__)

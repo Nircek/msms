@@ -9,7 +9,7 @@ from msms.ui.automation import step_registry
 
 if TYPE_CHECKING:
     from msms.ui.automation.step_base import Step
-    from msms.ui.controllers.app_controller import ApplicationController
+    from msms.ui.controllers import ApplicationController
 
 logger = logging.getLogger(__name__)
 
