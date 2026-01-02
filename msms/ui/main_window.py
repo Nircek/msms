@@ -6,11 +6,11 @@ from git import Repo
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from msms.ui.controllers.app_controller import ApplicationController
+from msms.ui.controllers.comment_controller import CommentController
 from msms.ui.controllers.display_controller import DisplayController, DisplayWidgets
 from msms.ui.controllers.experiment_controller import ExperimentController
 from msms.ui.controllers.plot_controller import PlotController
 from msms.ui.dialogs import (
-    DescriptionDialog,
     DeviceCommandDialog,
     DeviceSelectionDialog,
     ExperimentDialog,
@@ -88,6 +88,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             experiment_plan_text=self.experimentPlanTextEdit,
             app_controller=self.app_controller,
         )
+        self.comment_controller = CommentController(
+            comment_text_edit=self.commentPlainTextEdit,
+            parent_window=self,
+        )
 
         # Connect MainWindow signals to managers
         self.app_controller.connect_main_window_signals(self)
@@ -96,10 +100,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         storage_manager.new_data_row.connect(self.on_update_data_labels)
         storage_manager.new_data_row.connect(lambda _data: self.plot_controller.refresh_data_from_repository())
         storage_manager.columns_changed.connect(self.plot_controller.on_columns_change)
-        storage_manager.description_changed.connect(self._on_description_changed)
+        storage_manager.description_changed.connect(self.comment_controller.on_description_changed)
         storage_manager.restore_failed.connect(self._on_restore_failed)
         storage_manager.export_completed.connect(self._on_export_completed)
         storage_manager.export_failed.connect(self._on_export_failed)
+
+        self.comment_controller.description_changed.connect(self.storage_description_change_requested.emit)
 
         pg.setConfigOptions(antialias=True)
 
@@ -163,16 +169,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
         dialog = ExperimentDialog(self, app_controller=self.app_controller)
         dialog.exec()
-
-    @QtCore.Slot()
-    def on_actionDescribe_triggered(self) -> None:
-        """Show dialog for editing the experiment description."""
-        current_description = self.commentPlainTextEdit.toPlainText()
-        dialog = DescriptionDialog(self, current_description)
-        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            description = dialog.get_description()
-            self.commentPlainTextEdit.setPlainText(description)
-            self.storage_description_change_requested.emit(description)
 
     @QtCore.Slot()
     def on_actionExport_triggered(self) -> None:
@@ -260,19 +256,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def on_update_data_labels(self, data: dict[str, float | str]) -> None:
         """Update UI labels and all relevant views with the latest data payload."""
         self.display_controller.update_labels(data)
-
-    @QtCore.Slot()
-    def on_commentPlainTextEdit_textChanged(self) -> None:
-        """Persist experiment comments as they change."""
-
-        comment = self.commentPlainTextEdit.toPlainText()
-        self.storage_description_change_requested.emit(comment)
-
-    @QtCore.Slot(object)
-    def _on_description_changed(self, description: str) -> None:
-        previously_blocked = self.commentPlainTextEdit.blockSignals(True)
-        self.commentPlainTextEdit.setPlainText(description)
-        self.commentPlainTextEdit.blockSignals(previously_blocked)
 
     @QtCore.Slot(object)
     def _on_restore_failed(self, message: str) -> None:

@@ -25,6 +25,10 @@ class DiscoveredDevice:
     idn: str | None
     device_name: str | None
 
+    def __post_init__(self) -> None:
+        if self.idn is not None:
+            self.idn = self.idn.strip()
+
 
 class DeviceRepository:
     """Repository for discovering and managing VISA-connected device life cycle management."""

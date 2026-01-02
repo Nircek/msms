@@ -18,9 +18,10 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
     QLabel, QMainWindow, QMenu, QMenuBar,
-    QPlainTextEdit, QPushButton, QSizePolicy, QTextEdit,
-    QVBoxLayout, QWidget)
+    QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
+    QWidget)
 
+from msms.ui.controllers.comment_controller import DoubleClickPlainTextEdit
 from pyqtgraph import PlotWidget
 
 class Ui_MainWindow(object):
@@ -32,8 +33,6 @@ class Ui_MainWindow(object):
         self.actionSelectDevices.setObjectName(u"actionSelectDevices")
         self.actionManageExperiment = QAction(MainWindow)
         self.actionManageExperiment.setObjectName(u"actionManageExperiment")
-        self.actionDescribe = QAction(MainWindow)
-        self.actionDescribe.setObjectName(u"actionDescribe")
         self.actionExport = QAction(MainWindow)
         self.actionExport.setObjectName(u"actionExport")
         self.actionRestoreLastFile = QAction(MainWindow)
@@ -84,7 +83,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setSpacing(8)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.leftPane = QVBoxLayout()
-        self.leftPane.setSpacing(0)
+        self.leftPane.setSpacing(4)
         self.leftPane.setObjectName(u"leftPane")
         self.experimentStatusLayoutWidget = QWidget(self.centralWidget)
         self.experimentStatusLayoutWidget.setObjectName(u"experimentStatusLayoutWidget")
@@ -206,7 +205,7 @@ class Ui_MainWindow(object):
 
         self.leftPane.addWidget(self.line)
 
-        self.commentPlainTextEdit = QPlainTextEdit(self.centralWidget)
+        self.commentPlainTextEdit = DoubleClickPlainTextEdit(self.centralWidget)
         self.commentPlainTextEdit.setObjectName(u"commentPlainTextEdit")
 
         self.leftPane.addWidget(self.commentPlainTextEdit)
@@ -301,7 +300,6 @@ class Ui_MainWindow(object):
         self.menuBar.addAction(self.menuExperiment.menuAction())
         self.menuBar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionRestoreLastFile)
-        self.menuFile.addAction(self.actionDescribe)
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
@@ -327,7 +325,6 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MSMS", None))
         self.actionSelectDevices.setText(QCoreApplication.translate("MainWindow", u"select devices", None))
         self.actionManageExperiment.setText(QCoreApplication.translate("MainWindow", u"manage experiment", None))
-        self.actionDescribe.setText(QCoreApplication.translate("MainWindow", u"describe", None))
         self.actionExport.setText(QCoreApplication.translate("MainWindow", u"export", None))
         self.actionRestoreLastFile.setText(QCoreApplication.translate("MainWindow", u"restore last file", None))
         self.actionStartAcquisition.setText(QCoreApplication.translate("MainWindow", u"start acquisition", None))
@@ -363,7 +360,7 @@ class Ui_MainWindow(object):
 "</style></head><body style=\" font-family:'.AppleSystemUIFont'; font-size:13pt; font-weight:400; font-style:normal;\">\n"
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None))
         self.experimentPlanTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Experiment status.", None))
-        self.commentPlainTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"You can write CSV header here at any time before the export. Also, you can use a template in File->Describe", None))
+        self.commentPlainTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"You can write CSV header here at any time before the export. Also, you can double click to use a template.", None))
         self.autoFollowCheckBox.setText(QCoreApplication.translate("MainWindow", u"Follow", None))
         self.xAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"X: time", None))
         self.yAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"Y: value", None))

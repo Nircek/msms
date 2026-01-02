@@ -38,7 +38,7 @@
       <item>
        <layout class="QVBoxLayout" name="leftPane" stretch="0,0,0,0">
         <property name="spacing">
-         <number>0</number>
+         <number>4</number>
         </property>
         <item>
          <widget class="QWidget" name="experimentStatusLayoutWidget" native="true">
@@ -254,9 +254,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
          </widget>
         </item>
         <item>
-         <widget class="QPlainTextEdit" name="commentPlainTextEdit">
+         <widget class="DoubleClickPlainTextEdit" name="commentPlainTextEdit">
           <property name="placeholderText">
-           <string>You can write CSV header here at any time before the export. Also, you can use a template in File-&gt;Describe</string>
+           <string>You can write CSV header here at any time before the export. Also, you can double click to use a template.</string>
           </property>
          </widget>
         </item>
@@ -375,7 +375,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
      <string>File</string>
     </property>
     <addaction name="actionRestoreLastFile"/>
-    <addaction name="actionDescribe"/>
     <addaction name="actionExport"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
@@ -426,11 +425,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <action name="actionManageExperiment">
    <property name="text">
     <string>manage experiment</string>
-   </property>
-  </action>
-  <action name="actionDescribe">
-   <property name="text">
-    <string>describe</string>
    </property>
   </action>
   <action name="actionExport">
@@ -544,6 +538,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <extends>QWidget</extends>
    <header>pyqtgraph</header>
    <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DoubleClickPlainTextEdit</class>
+   <extends>QPlainTextEdit</extends>
+   <header>msms.ui.controllers.comment_controller</header>
   </customwidget>
  </customwidgets>
  <resources/>

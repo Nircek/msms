@@ -13,8 +13,6 @@ logger = logging.getLogger(__name__)
 class DeviceCommandDialog(QtWidgets.QDialog):
     """Dialog for selecting a device and sending commands to it."""
 
-    # Device command signals
-    device_info_requested = QtCore.Signal()
     device_command_requested = QtCore.Signal(object, object)
 
     def __init__(self, parent: QtWidgets.QWidget, app_controller: ApplicationController) -> None:
@@ -57,17 +55,10 @@ class DeviceCommandDialog(QtWidgets.QDialog):
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
 
-        self.device_info_requested.connect(self.app_controller.managers.device.on_device_info_request)
         self.device_command_requested.connect(self.app_controller.managers.device.on_device_command_request)
-        self.app_controller.managers.device.device_info_collected.connect(self._on_device_info_received)
-        self.device_info_requested.emit()
 
-    @QtCore.Slot(object)
-    def _on_device_info_received(self, device_info: dict[str, DiscoveredDevice]) -> None:
-        """Handle device info response from the device manager."""
-        self._device_info = device_info
         self.device_combo.clear()
-
+        device_info = app_controller.device_info_cache
         for address, info in device_info.items():
             display_text = f"{info.device_name or 'Unknown'} ({address})"
             if info.idn:
@@ -77,9 +68,6 @@ class DeviceCommandDialog(QtWidgets.QDialog):
         if not device_info:
             self.device_combo.addItem("No devices available", None)
             self.device_combo.setEnabled(False)
-
-        # Disconnect signal to avoid multiple connections
-        self.app_controller.managers.device.device_info_collected.disconnect(self._on_device_info_received)
 
     def _send_command(self) -> None:
         """Send the command to the selected device."""
