@@ -71,23 +71,6 @@ class DeviceManager(QtCore.QObject):
             self._timer = QtCore.QTimer(self)
             self._timer.timeout.connect(self._poll_devices)
 
-        self._repository.set_selected_addresses(self._selected_addresses)
-
-        try:
-            self._repository.prepare_devices()
-            self._repository.initialize_devices()
-            initial_data = self._repository.collect_data()
-        except Exception:
-            logger.exception("Failed to start device acquisition")
-            self._repository.shutdown_devices()
-            return
-
-        if not initial_data:
-            logger.error("No devices returned data; aborting acquisition start.")
-            self._repository.shutdown_devices()
-            return
-
-        self.data_initialized.emit(initial_data)
         logger.info("Initial data collected, starting acquisition.")
         self._is_running = True
         self._timer.setInterval(self._interval_ms)
@@ -111,8 +94,6 @@ class DeviceManager(QtCore.QObject):
         if self._timer is not None:
             self._timer.stop()
 
-        self._repository.close()
-
         logger.info("Device acquisition stopped")
 
     @QtCore.Slot(object)
@@ -120,9 +101,22 @@ class DeviceManager(QtCore.QObject):
         """Configure which device addresses should be polled."""
         self._selected_addresses = addresses
         self._repository.set_selected_addresses(addresses)
-        if self._is_running:
-            logger.warning("Device selection changed during acquisition; restart required")
         self.on_device_info_request()  # Update device info after selection change
+
+        try:
+            self._repository.prepare_devices()
+            self._repository.initialize_devices()
+            initial_data = self._repository.collect_data()
+            if not initial_data:
+                logger.error("No devices returned data after initialization")
+                self._repository.shutdown_devices()
+                return
+        except Exception:
+            logger.exception("Failed to select devices")
+            self._repository.shutdown_devices()
+            return
+
+        self.data_initialized.emit(initial_data)
 
     @QtCore.Slot()
     def on_device_info_request(self) -> None:
@@ -185,3 +179,4 @@ class DeviceManager(QtCore.QObject):
 
         self.on_discovery_stop_request()
         self.on_acquisition_stop_request()
+        self._repository.close()

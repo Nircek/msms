@@ -77,6 +77,7 @@ class PlotController(QtCore.QObject):
         """Set plot interaction options."""
         self.plot_widget.setClipToView(True)
         self.plot_widget.getViewBox().setLimits(minXRange=1e-20, minYRange=1e-20, maxXRange=1e20, maxYRange=1e20)
+        self.plot_widget.getViewBox().setMouseMode(pg.ViewBox.RectMode)
 
     @staticmethod
     def _is_dark_theme() -> bool:

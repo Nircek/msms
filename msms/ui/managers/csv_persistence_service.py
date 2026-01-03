@@ -171,7 +171,7 @@ class CsvPersistenceService:
         if not description_path.exists():
             raise FileNotFoundError(description_path)
 
-        dataframe = pd.read_csv(csv_path, comment="#")
+        dataframe = pd.read_csv(csv_path, comment="#", low_memory=False)
         columns = list(dataframe.columns)
         last_row_dict: dict[str, str] = {}
         if not dataframe.empty:

@@ -251,8 +251,8 @@ class StorageManager(QtCore.QObject):
             return
 
         parsed_data, row, number_row = self.transform_data(data)
-        self.new_data_row.emit(parsed_data)
         self._data_repository.append(number_row)
+        self.new_data_row.emit(parsed_data)
         self.csv_persistence.write_row(row)
         self.row_number += 1
 
