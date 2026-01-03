@@ -322,7 +322,7 @@ class Ui_MainWindow(object):
         self.setPointLabel.setText(QCoreApplication.translate("MainWindow", u"Set point", None))
         self.rampLabel.setText(QCoreApplication.translate("MainWindow", u" Ramp rate", None))
         self.setPointValue.setText(QCoreApplication.translate("MainWindow", u"350.0K", None))
-        self.rampValue.setText(QCoreApplication.translate("MainWindow", u"0.1K/s", None))
+        self.rampValue.setText(QCoreApplication.translate("MainWindow", u"0.1K/min", None))
         self.commentPlainTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"You can write CSV header here at any time before the export. Also, you can double click to use a template.", None))
         self.autoFollowCheckBox.setText(QCoreApplication.translate("MainWindow", u"Follow", None))
         self.xAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"X: time", None))

@@ -217,7 +217,7 @@
                 <string notr="true">font-size: 32pt; font-weight: 700;</string>
                </property>
                <property name="text">
-                <string>0.1K/s</string>
+                <string>0.1K/min</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
