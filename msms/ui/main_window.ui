@@ -36,21 +36,21 @@
        <number>8</number>
       </property>
       <item>
-       <layout class="QVBoxLayout" name="leftPane" stretch="0,0,0,0">
+       <layout class="QVBoxLayout" name="leftPane" stretch="0,0,0,0,0">
         <property name="spacing">
          <number>4</number>
         </property>
         <property name="leftMargin">
-        <number>4</number>
+         <number>4</number>
         </property>
         <property name="topMargin">
-        <number>0</number>
+         <number>0</number>
         </property>
         <property name="rightMargin">
-        <number>4</number>
+         <number>4</number>
         </property>
         <property name="bottomMargin">
-        <number>0</number>
+         <number>0</number>
         </property>
         <item>
          <widget class="QWidget" name="experimentStatusLayoutWidget" native="true">
@@ -377,18 +377,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="actionRestoreLastFile"/>
     <addaction name="actionExport"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
-   </widget>
-   <widget class="QMenu" name="menuDevices">
-    <property name="title">
-     <string>Devices</string>
-    </property>
     <addaction name="actionSendDeviceCommand"/>
-   </widget>
-   <widget class="QMenu" name="menuAutomation">
-    <property name="title">
-     <string>Automation</string>
-    </property>
+    <addaction name="separator"/>
+    <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -398,8 +389,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
     <addaction name="actionHelp"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuDevices"/>
-   <addaction name="menuAutomation"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionManageAutomation">
@@ -468,6 +457,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
   <action name="actionQuit">
    <property name="text">
     <string>quit</string>
+   </property>
+   <property name="menuRole">
+    <enum>QAction::MenuRole::NoRole</enum>
    </property>
   </action>
   <action name="actionAbout">

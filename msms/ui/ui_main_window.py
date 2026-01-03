@@ -55,6 +55,7 @@ class Ui_MainWindow(object):
         self.actionInterval_5_0s.setCheckable(True)
         self.actionQuit = QAction(MainWindow)
         self.actionQuit.setObjectName(u"actionQuit")
+        self.actionQuit.setMenuRole(QAction.MenuRole.NoRole)
         self.actionAbout = QAction(MainWindow)
         self.actionAbout.setObjectName(u"actionAbout")
         self.actionAbout.setMenuRole(QAction.MenuRole.NoRole)
@@ -278,23 +279,18 @@ class Ui_MainWindow(object):
         self.menuBar.setGeometry(QRect(0, 0, 1200, 33))
         self.menuFile = QMenu(self.menuBar)
         self.menuFile.setObjectName(u"menuFile")
-        self.menuDevices = QMenu(self.menuBar)
-        self.menuDevices.setObjectName(u"menuDevices")
-        self.menuAutomation = QMenu(self.menuBar)
-        self.menuAutomation.setObjectName(u"menuAutomation")
         self.menuHelp = QMenu(self.menuBar)
         self.menuHelp.setObjectName(u"menuHelp")
         MainWindow.setMenuBar(self.menuBar)
 
         self.menuBar.addAction(self.menuFile.menuAction())
-        self.menuBar.addAction(self.menuDevices.menuAction())
-        self.menuBar.addAction(self.menuAutomation.menuAction())
         self.menuBar.addAction(self.menuHelp.menuAction())
         self.menuFile.addAction(self.actionRestoreLastFile)
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionSendDeviceCommand)
+        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
-        self.menuDevices.addAction(self.actionSendDeviceCommand)
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addAction(self.actionHelp)
 
@@ -344,8 +340,6 @@ class Ui_MainWindow(object):
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:"
                         "0; text-indent:0px;\">1.3333e-7</p></body></html>", None))
         self.menuFile.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
-        self.menuDevices.setTitle(QCoreApplication.translate("MainWindow", u"Devices", None))
-        self.menuAutomation.setTitle(QCoreApplication.translate("MainWindow", u"Automation", None))
         self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
 
