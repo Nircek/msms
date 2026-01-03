@@ -40,7 +40,7 @@ class ApplicationController(QtCore.QObject):
     _storage_shutdown_requested = QtCore.Signal()
     _automation_shutdown_requested = QtCore.Signal()
 
-    def __init__(self, interval_ms: int = 500) -> None:
+    def __init__(self, interval_ms: int = 3000) -> None:
         super().__init__()
 
         self.current_interval_ms = interval_ms

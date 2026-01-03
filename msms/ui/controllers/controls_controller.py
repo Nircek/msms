@@ -20,7 +20,7 @@ class SymbolButton(QtWidgets.QPushButton):
     def __init__(self, symbol: str, description: str, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(symbol, parent)
         self.setMinimumHeight(40)
-        self.setStyleSheet("font-size: 18pt;")
+        self.setStyleSheet("font-size: 20pt;")
         self.setToolTip(description)
 
 
@@ -31,8 +31,8 @@ class ControlsController(QtCore.QObject):
     device_selection_requested = QtCore.Signal()
     acquisition_start_requested = QtCore.Signal()
     acquisition_stop_requested = QtCore.Signal()
-    manual_session_requested = QtCore.Signal()
-    interval_change_requested = QtCore.Signal()
+    manual_measurement_requested = QtCore.Signal()
+    interval_change_requested = QtCore.Signal(int)
 
     # Automation signals
     automation_edit_requested = QtCore.Signal()
@@ -103,6 +103,7 @@ class ControlsController(QtCore.QObject):
 
         self._interval_button = SymbolButton("🕐", "Change acquisition interval")
         self._interval_button.clicked.connect(self._on_interval_clicked)
+        self._update_interval_button()
         acq_layout.addWidget(self._interval_button)
 
         self._manual_button = SymbolButton("➀", "One-time manual measurement")
@@ -174,20 +175,60 @@ class ControlsController(QtCore.QObject):
             self._acquisition_running = False
             self._acq_button.setText("●")
             self._acq_button.setToolTip("Start data acquisition")
+            self._acq_button.setStyleSheet("QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: red; }")
         else:
             logger.info("Start acquisition clicked")
             self.acquisition_start_requested.emit()
             self._acquisition_running = True
             self._acq_button.setText("■")
             self._acq_button.setToolTip("Stop data acquisition")
+            self._acq_button.setStyleSheet("QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: black; }")
 
     @QtCore.Slot()
     def _on_interval_clicked(self) -> None:
-        """Handle interval change button click."""
+        """Display interval selection menu with predefined and custom options."""
+        menu = QtWidgets.QMenu()
+
+        # Predefined intervals
+        for seconds in [3, 5, 10]:
+            action = menu.addAction(f"{seconds} seconds")
+            assert action is not None
+            action.triggered.connect(lambda _checked=None, s=seconds: self._set_interval(s * 1000))
+
+        # Custom interval option
+        menu.addSeparator()
+        custom_action = menu.addAction("Custom...")
+        assert custom_action is not None
+        custom_action.triggered.connect(self._show_custom_interval_dialog)
+
+        menu.exec(QtGui.QCursor.pos())
+
+    def _set_interval(self, interval_ms: int) -> None:
+        """Update acquisition interval and button display."""
+        logger.info("Setting interval to %d ms", interval_ms)
+        self.app_controller.current_interval_ms = interval_ms
+        self.interval_change_requested.emit(interval_ms)
+        self._update_interval_button()
+
+    def _show_custom_interval_dialog(self) -> None:
+        """Show dialog for custom interval input."""
+        value, ok = QtWidgets.QInputDialog.getDouble(
+            self.placeholder, "Custom Interval", "Enter interval in seconds:", 5.0, 0.5, 3600.0, 1
+        )
+        if ok:
+            self._set_interval(int(value * 1000))
+
+    def _update_interval_button(self) -> None:
+        """Update interval button tooltip with current value."""
+        if self._interval_button is not None:
+            seconds = self.app_controller.current_interval_ms / 1000
+            self._interval_button.setToolTip(f"Change acquisition interval (current: {seconds:.1f}s)")
 
     @QtCore.Slot()
     def _on_manual_clicked(self) -> None:
-        """Handle manual measurement button click."""
+        """Trigger manual single measurement."""
+        logger.info("Manual measurement clicked")
+        self.manual_measurement_requested.emit()
 
     @QtCore.Slot()
     def _on_edit_clicked(self) -> None:
@@ -207,12 +248,18 @@ class ControlsController(QtCore.QObject):
             self._automation_running = False
             self._automation_button.setText("▶")
             self._automation_button.setToolTip("Start automation")
+            self._automation_button.setStyleSheet(
+                "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: green; }"
+            )
         else:
             logger.info("Start automation clicked")
             self.automation_start_requested.emit()
             self._automation_running = True
-            self._automation_button.setText("■")
-            self._automation_button.setToolTip("Stop automation")
+            self._automation_button.setText("⏸")
+            self._automation_button.setToolTip("Pause automation")
+            self._automation_button.setStyleSheet(
+                "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: blue; }"
+            )
 
     @QtCore.Slot()
     def _on_skip_clicked(self) -> None:

@@ -23,13 +23,6 @@ from msms.ui.ui_main_window import Ui_MainWindow
 
 logger = logging.getLogger(__name__)
 
-# Interval constants in milliseconds
-INTERVAL_0_1S_MS = 100
-INTERVAL_0_5S_MS = 500
-INTERVAL_1_0S_MS = 1000
-INTERVAL_2_0S_MS = 2000
-INTERVAL_5_0S_MS = 5000
-
 
 class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     # Device signals
@@ -65,7 +58,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.center_on_screen()
 
-        self.app_controller = ApplicationController(interval_ms=500)
+        self.app_controller = ApplicationController()
         self._selected_device_addresses: list[str] = []
 
         self.plot_controller = PlotController(
@@ -112,6 +105,10 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.controls_controller.device_selection_requested.connect(self._handle_device_selection)
         self.controls_controller.acquisition_start_requested.connect(self.device_acquisition_start_requested.emit)
         self.controls_controller.acquisition_stop_requested.connect(self.device_acquisition_stop_requested.emit)
+        self.controls_controller.manual_measurement_requested.connect(
+            self.app_controller.managers.device.on_devices_poll_request
+        )
+        self.controls_controller.interval_change_requested.connect(self._on_interval_change)
         self.controls_controller.automation_edit_requested.connect(self.on_actionManageAutomation_triggered)
         self.controls_controller.automation_start_requested.connect(self.automation_start_requested.emit)
         self.controls_controller.automation_stop_requested.connect(self.automation_stop_requested.emit)
@@ -120,15 +117,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.comment_controller.description_changed.connect(self.storage_description_change_requested.emit)
 
         pg.setConfigOptions(antialias=True)
-
-        # Connect interval actions
-        self.actionInterval_0_1s.triggered.connect(lambda: self._set_interval(INTERVAL_0_1S_MS))
-        self.actionInterval_0_5s.triggered.connect(lambda: self._set_interval(INTERVAL_0_5S_MS))
-        self.actionInterval_1_0s.triggered.connect(lambda: self._set_interval(INTERVAL_1_0S_MS))
-        self.actionInterval_2_0s.triggered.connect(lambda: self._set_interval(INTERVAL_2_0S_MS))
-        self.actionInterval_5_0s.triggered.connect(lambda: self._set_interval(INTERVAL_5_0S_MS))
-
-        self._update_interval_checks()
 
     @QtCore.Slot()
     def on_actionRestoreLastFile_triggered(self) -> None:
@@ -185,6 +173,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         dialog = AutomationDialog(self, app_controller=self.app_controller)
         dialog.exec()
 
+    @QtCore.Slot(int)
+    def _on_interval_change(self, interval_ms: int) -> None:
+        """Handle interval change from controls controller."""
+        logger.info("Changing device manager interval to %d ms", interval_ms)
+        self.app_controller.current_interval_ms = interval_ms
+        self.device_interval_change_requested.emit(interval_ms)
+
     @QtCore.Slot()
     def on_actionExport_triggered(self) -> None:
         """Export current data to CSV file."""
@@ -225,22 +220,6 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         """Open device command dialog."""
         dialog = DeviceCommandDialog(self, self.app_controller)
         dialog.exec()
-
-    def _set_interval(self, value_ms: int) -> None:
-        """Change acquisition interval."""
-        logger.info("Changing device manager interval to %d ms", value_ms)
-        self.app_controller.current_interval_ms = value_ms
-        self.device_interval_change_requested.emit(value_ms)
-        self._update_interval_checks()
-
-    def _update_interval_checks(self) -> None:
-        """Update checkmarks on interval menu items."""
-        current = self.app_controller.current_interval_ms
-        self.actionInterval_0_1s.setChecked(current == INTERVAL_0_1S_MS)
-        self.actionInterval_0_5s.setChecked(current == INTERVAL_0_5S_MS)
-        self.actionInterval_1_0s.setChecked(current == INTERVAL_1_0S_MS)
-        self.actionInterval_2_0s.setChecked(current == INTERVAL_2_0S_MS)
-        self.actionInterval_5_0s.setChecked(current == INTERVAL_5_0S_MS)
 
     @QtCore.Slot(object)
     def on_update_data_labels(self, data: dict[str, float | str]) -> None:

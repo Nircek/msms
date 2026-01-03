@@ -69,16 +69,18 @@ class DeviceManager(QtCore.QObject):
 
         if self._timer is None:
             self._timer = QtCore.QTimer(self)
-            self._timer.timeout.connect(self._poll_devices)
+            self._timer.timeout.connect(self.on_devices_poll_request)
 
         logger.info("Initial data collected, starting acquisition.")
         self._is_running = True
         self._timer.setInterval(self._interval_ms)
         self._timer.start()
 
-    def _poll_devices(self) -> None:
-        """Collect data from devices (called by timer)."""
-        if not self._is_running:
+    @QtCore.Slot()
+    def on_devices_poll_request(self) -> None:
+        """Collect data from devices (called by timer or manually)."""
+        if not self._selected_addresses:
+            logger.error("No device addresses configured; cannot poll devices.")
             return
 
         data = self._repository.collect_data()
