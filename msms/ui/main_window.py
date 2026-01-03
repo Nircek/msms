@@ -17,6 +17,7 @@ from msms.ui.dialogs import (
     AutomationDialog,
     DeviceCommandDialog,
     DeviceSelectionDialog,
+    ExportDialog,
     MarkdownViewerDialog,
 )
 from msms.ui.ui_main_window import Ui_MainWindow
@@ -58,7 +59,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.center_on_screen()
 
-        self.app_controller = ApplicationController()
+        self.app_controller = ApplicationController(interval_ms=500)
         self._selected_device_addresses: list[str] = []
 
         self.plot_controller = PlotController(
@@ -182,16 +183,38 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
 
     @QtCore.Slot()
     def on_actionExport_triggered(self) -> None:
-        """Export current data to CSV file."""
-        dialog = QtWidgets.QFileDialog(self)
-        dialog.setWindowTitle("Export Data to CSV")
-        dialog.setAcceptMode(QtWidgets.QFileDialog.AcceptMode.AcceptSave)
-        dialog.setNameFilter("CSV Files (*.csv)")
-        dialog.setDefaultSuffix("csv")
-        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            export_path = Path(dialog.selectedFiles()[0])
-            logger.info("Exporting data to CSV file: %s", export_path)
-            self.storage_export_requested.emit((export_path, None))
+        """Export current data to CSV file with customizable options."""
+        # Get available columns from storage manager
+        columns = self.app_controller.data_repository.columns
+        if not columns:
+            QtWidgets.QMessageBox.information(
+                self,
+                "No Data Available",
+                "No data available to export. Start acquisition first.",
+            )
+            return
+
+        # Show export dialog
+        dialog = ExportDialog(self, available_columns=list(columns))
+        if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
+            return
+
+        export_path = dialog.get_selected_path()
+        if not export_path:
+            return
+
+        selected_columns = dialog.get_selected_columns()
+        include_comments = dialog.get_include_comments()
+        include_automation_log = dialog.get_include_automation_log()
+
+        logger.info(
+            "Exporting data to %s (columns: %d, comments: %s, automation log: %s)",
+            export_path,
+            len(selected_columns),
+            include_comments,
+            include_automation_log,
+        )
+        self.storage_export_requested.emit((export_path, selected_columns, include_comments, include_automation_log))
 
     @QtCore.Slot()
     def on_actionHelp_triggered(self) -> None:

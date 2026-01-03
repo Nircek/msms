@@ -194,17 +194,23 @@ class StorageManager(QtCore.QObject):
         self._apply_snapshot(snapshot)
 
     @QtCore.Slot(object)
-    def on_export_request(self, request: tuple[Path, list[str] | None]) -> None:
-        """Export data to CSV."""
-        export_path, columns = request
+    def on_export_request(self, request: tuple[Path, list[str] | None, bool, bool]) -> None:
+        """Export data to CSV.
+
+        Args:
+            request: Tuple of (path, columns, include_comments, include_automation_log).
+        """
+        export_path, columns, include_comments, include_automation_log = request
         if export_path is None:
             message = "Export request missing path."
             logger.error(message)
             self.export_failed.emit(message)
             return
 
+        automation_log = self._automation_log if include_automation_log else None
+
         try:
-            self.csv_persistence.export_to_csv(export_path, columns, self._automation_log)
+            self.csv_persistence.export_to_csv(export_path, columns, include_comments, automation_log)
         except Exception:
             logger.exception("Failed to export data to %s", export_path)
             self.export_failed.emit(f"Failed to export data to {export_path}")

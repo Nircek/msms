@@ -208,13 +208,15 @@ class CsvPersistenceService:
         self,
         export_path: Path,
         columns: list[str] | None = None,
+        include_comments: bool = True,
         automation_log: list[tuple[str, str, datetime | None]] | None = None,
     ) -> None:
         """Export current CSV data to a user-provided path.
 
         Args:
             export_path: Destination path for export.
-            columns: Optional column filter.
+            columns: Optional column filter (None = all columns).
+            include_comments: Whether to include description and metadata.
             automation_log: Optional automation log entries (step_id, label, timestamp).
         """
         if self.csv_file is not None:
@@ -232,18 +234,20 @@ class CsvPersistenceService:
             if columns is None:
                 columns = list(reader.fieldnames or [])
 
-            # Write description
-            outfile.write("\n".join(f"# {line}" for line in self.description.splitlines()) + "\n")
+            # Write description and metadata if requested
+            if include_comments:
+                if self.description:
+                    outfile.write("\n".join(f"# {line}" for line in self.description.splitlines()) + "\n")
 
-            # Write automation log if provided
-            if automation_log:
-                outfile.write("#\n# Automation Log:\n")
-                for step_id, label, timestamp in automation_log:
-                    if timestamp is not None:
-                        ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
-                        outfile.write(f"# {step_id}: {label} (started: {ts_str})\n")
-                    else:
-                        outfile.write(f"# {step_id}: {label} (not started)\n")
+                # Write automation log if provided
+                if automation_log:
+                    outfile.write("#\n# Automation Log:\n")
+                    for step_id, label, timestamp in automation_log:
+                        if timestamp is not None:
+                            ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+                            outfile.write(f"# {step_id}: {label} (started: {ts_str})\n")
+                        else:
+                            outfile.write(f"# {step_id}: {label} (not started)\n")
 
             writer = csv.DictWriter(outfile, fieldnames=columns)
 
