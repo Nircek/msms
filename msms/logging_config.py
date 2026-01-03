@@ -13,7 +13,7 @@ init_timestamp = datetime.now(tz=UTC).strftime("%Y%m%dT%H%M%SZ")
 def setup_correct_cwd() -> None:
     """Set current working directory to the parent of the module."""
     module_path = Path(inspect.getfile(msms)).resolve()
-    assert str(module_path).endswith("/msms/__init__.py"), module_path
+    assert module_path.parts[-2:] == ("msms", "__init__.py"), module_path
     parent_of_module = module_path.parent.parent
     os.chdir(parent_of_module)
 
