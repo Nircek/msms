@@ -4,7 +4,7 @@ import sys
 import time
 from typing import TYPE_CHECKING
 
-from PySide6 import QtCore, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 if TYPE_CHECKING:
     from types import FrameType
@@ -52,9 +52,9 @@ def ui() -> None:
     logger = logging.getLogger(__name__)
     logger.info("Starting MSMS application")
 
-    app = QtWidgets.QApplication.instance()
-    if app is None:
-        app = QtWidgets.QApplication([])
+    app = QtWidgets.QApplication(sys.argv)
+
+    app.setWindowIcon(QtGui.QIcon("icon.svg"))
 
     win = MainWindow()
 

@@ -57,6 +57,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def __init__(self) -> None:
         super().__init__()
         self.setupUi(self)
+        self.setWindowIcon(QtGui.QIcon("icon.svg"))
         self.center_on_screen()
 
         self.app_controller = ApplicationController(interval_ms=500)
