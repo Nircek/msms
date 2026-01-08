@@ -255,7 +255,7 @@ class ControlsController(QtCore.QObject):
             logger.info("Start automation clicked")
             self.automation_start_requested.emit()
             self._automation_running = True
-            self._automation_button.setText("⏸")
+            self._automation_button.setText("■")
             self._automation_button.setToolTip("Pause automation")
             self._automation_button.setStyleSheet(
                 "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: blue; }"

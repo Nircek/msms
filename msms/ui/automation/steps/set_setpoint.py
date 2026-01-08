@@ -29,11 +29,12 @@ class SetSetpointStep(Step):
         super().__init__(step_id)
         self.device_address = ""
         self.setpoint_value = 300.0
+        self.ramp_rate_value = 0.0
 
     def get_label(self) -> str:
         """Get human-readable label."""
         if self.device_address:
-            return f"Set {self.device_address}: SETP {self.setpoint_value}"
+            return f"Set SETP {self.setpoint_value} RAMPR {self.ramp_rate_value} on {self.device_address}"
         return "Set Setpoint (not configured)"
 
     def exec_edit_dialog(self, parent: QtWidgets.QWidget | None, app_controller: ApplicationController) -> bool:
@@ -58,6 +59,7 @@ class SetSetpointStep(Step):
         dialog = SetSetpointDialog(parent, device_info=device_info_map)
         dialog.set_device_address(self.device_address)
         dialog.value_spinbox.setValue(self.setpoint_value)
+        dialog.ramp_rate_spinbox.setValue(self.ramp_rate_value)
 
         if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
             return False
@@ -73,6 +75,7 @@ class SetSetpointStep(Step):
 
         self.device_address = device_address
         self.setpoint_value = dialog.get_setpoint_value()
+        self.ramp_rate_value = dialog.get_ramp_rate_value()
         return True
 
     def on_start(self, runner: AutomationManager) -> None:

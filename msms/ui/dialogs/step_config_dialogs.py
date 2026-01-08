@@ -43,6 +43,12 @@ class SetSetpointDialog(QtWidgets.QDialog):
         self.value_spinbox.setDecimals(1)
         self.value_spinbox.setSuffix(" K")
         layout.addRow("Setpoint Value:", self.value_spinbox)
+        self.ramp_rate_spinbox = QtWidgets.QDoubleSpinBox()
+        self.ramp_rate_spinbox.setRange(0.0, 100.0)
+        self.ramp_rate_spinbox.setValue(0.0)
+        self.ramp_rate_spinbox.setDecimals(1)
+        self.ramp_rate_spinbox.setSuffix(" K")
+        layout.addRow("Ramp Rate:", self.ramp_rate_spinbox)
 
         # Buttons
         button_box = QtWidgets.QDialogButtonBox(
@@ -67,6 +73,10 @@ class SetSetpointDialog(QtWidgets.QDialog):
     def get_setpoint_value(self) -> float:
         """Get the configured setpoint value."""
         return self.value_spinbox.value()
+
+    def get_ramp_rate_value(self) -> float:
+        """Get the configured ramp rate value."""
+        return self.ramp_rate_spinbox.value()
 
 
 class WaitForDurationDialog(QtWidgets.QDialog):

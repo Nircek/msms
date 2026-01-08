@@ -76,11 +76,11 @@ class LakeShore330(DeviceBase):
             case _:
                 set_point_unit = "V"
         ramps = self.query_resource("RAMPS?")
-        ramp_rate = self.query_resource("RAMPR?") if ramps.strip() == "1" else "0"
+        ramp_rate = self.query_resource("RAMPR?")
         return {
             "sample": self.query_resource("SDAT?"),
             "control": self.query_resource("CDAT?"),
             "set_point": set_point,
             "_set_point_unit": set_point_unit,
-            "ramp_rate": ramp_rate,
+            "ramp_rate": ramp_rate if ramps == "1" else f"({ramp_rate})",
         }

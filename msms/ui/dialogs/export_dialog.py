@@ -35,7 +35,7 @@ class ExportDialog(QtWidgets.QDialog):
         self._selected_path: Path | None = None
         self._setup_ui()
 
-    def _setup_ui(self) -> None:
+    def _setup_ui(self) -> None:  # noqa: PLR0915
         """Create dialog UI with export options."""
         layout = QtWidgets.QVBoxLayout(self)
 
@@ -66,6 +66,10 @@ class ExportDialog(QtWidgets.QDialog):
         deselect_all_button.clicked.connect(self._deselect_all_columns)
         select_buttons_layout.addWidget(deselect_all_button)
         column_layout.addLayout(select_buttons_layout)
+
+        selection_hint = QtWidgets.QLabel("Hint: Use Shift or Ctrl to select multiple columns")
+        selection_hint.setStyleSheet("QLabel { color: gray; font-size: 9pt; }")
+        column_layout.addWidget(selection_hint)
 
         self.column_list = QtWidgets.QListWidget()
         self.column_list.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
