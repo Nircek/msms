@@ -32,9 +32,11 @@ class SetSetpointDialog(QtWidgets.QDialog):
         self.device_combo = QtWidgets.QComboBox()
         self.device_combo.setEditable(False)
         if device_info:
-            for address, (_device_name, display_text) in device_info.items():
+            info = sorted(device_info.items(), key=lambda item: item[1][0].startswith("LakeShore "), reverse=True)
+
+            for address, (_device_name, display_text) in info:
                 self.device_combo.addItem(display_text, address)
-        layout.addRow("LakeShore Device:", self.device_combo)
+        layout.addRow("Device:", self.device_combo)
 
         # Setpoint value input
         self.value_spinbox = QtWidgets.QDoubleSpinBox()

@@ -80,7 +80,7 @@ class SetSetpointStep(Step):
 
     def on_start(self, runner: AutomationManager) -> None:
         """Send setpoint command when step starts."""
-        command = f"SETP {self.setpoint_value}"
+        command = f"RAMP 1;RAMPR {self.ramp_rate_value};SETP {self.setpoint_value}"
         try:
             runner.send_device_command(self.device_address, command)
             logger.info("Sent command to %s: %s", self.device_address, command)

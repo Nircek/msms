@@ -52,14 +52,19 @@ class LockInSr830(DeviceBase):
 
     def update(self) -> dict[str, str]:
         phase, frequence, amplitude = (self.query_resource(cmd) for cmd in ("PHAS?", "FREQ?", "SLVL?"))
-        data = self.query_resource("SNAP?1,2,5,6,7,8").split(",")
+        theta, r, x, y, *aux = [
+            *self.query_resource("SNAP?3,4").split(","),
+            *self.query_resource("SNAP?1,2,5,6,7,8").split(","),
+        ]
         return {
-            "X": data[0],
-            "Y": data[1],
-            "AUX1": data[2],
-            "AUX2": data[3],
-            "AUX3": data[4],
-            "AUX4": data[5],
+            "X": x,
+            "Y": y,
+            "R": r,
+            "theta": theta,
+            "AUX1": aux[0],
+            "AUX2": aux[1],
+            "AUX3": aux[2],
+            "AUX4": aux[3],
             "phase": phase,
             "frequency": frequence,
             "amplitude": amplitude,

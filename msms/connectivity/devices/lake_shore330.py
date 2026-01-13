@@ -26,7 +26,7 @@ class LakeShore330(DeviceBase):
         cmds = [
             "CUNI K;CUNI?",  # set units to Kelvin
             "SUNI K;SUNI?",
-            "TUNE 3;TUNE?",  # set PID auto-tune mode
+            "TUNE?",  # query auto tuning status
             "ESE?",  # query Event Status Enable Register
             "ESR?",  # query Event Status Register
             "*SRE?",  # query Service Request Enable Register
@@ -75,12 +75,12 @@ class LakeShore330(DeviceBase):
                 set_point_unit = "K"
             case _:
                 set_point_unit = "V"
-        ramps = self.query_resource("RAMPS?")
-        ramp_rate = self.query_resource("RAMPR?")
+        ramps = self.query_resource("RAMPS?").strip()
+        ramp_rate = self.query_resource("RAMPR?").strip()
         return {
-            "sample": self.query_resource("SDAT?"),
-            "control": self.query_resource("CDAT?"),
-            "set_point": set_point,
-            "_set_point_unit": set_point_unit,
-            "ramp_rate": ramp_rate if ramps == "1" else f"({ramp_rate})",
+            "T_sample": self.query_resource("SDAT?"),
+            "T_control": self.query_resource("CDAT?"),
+            "T_set_point": set_point,
+            "_T_set_point_unit": set_point_unit,
+            "T_ramp_rate": ramp_rate if ramps == "1" else f"({ramp_rate})",
         }

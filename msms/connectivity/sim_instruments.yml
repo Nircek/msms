@@ -32,6 +32,8 @@ devices:
         r: "16"
       - q: "SNAP?1,2,3,4"
         r: "{RANDOM(-5, 5, 4):.5f}"
+      - q: "SNAP?3,4"
+        r: "{RANDOM(-5, 5, 2):.5f}"
       - q: "SNAP?1,2,5,6,7,8"
         r: "{RANDOM(-5, 5, 6):.5f}"
     properties:

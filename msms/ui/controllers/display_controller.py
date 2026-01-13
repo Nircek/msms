@@ -39,21 +39,21 @@ class DisplayController:
         self.widgets.number_label.setText(no)
 
         # Temperature readings
-        sample, control = data.get("sample", "N/A"), data.get("control", "N/A")
+        sample, control = data.get("T_sample", "N/A"), data.get("T_control", "N/A")
         sample = f"{sample:.2f}K" if isinstance(sample, float) else truncate_text(sample.strip())
         control = f"{control:.2f}K" if isinstance(control, float) else truncate_text(control.strip())
         self.widgets.sample_label.setText(sample)
         self.widgets.control_label.setText(control)
 
         # Set point with unit
-        set_point, set_point_unit = data.get("set_point", "N/A"), data.get("set_point_unit", "")
+        set_point, set_point_unit = data.get("T_set_point", "N/A"), data.get("T_set_point_unit", "")
         set_point = (
             f"{set_point:.2f} {set_point_unit}" if isinstance(set_point, float) else truncate_text(set_point.strip())
         )
         self.widgets.set_point_label.setText(set_point)
 
         # Ramp rate
-        ramp_rate = data.get("ramp_rate") or "-"
+        ramp_rate = data.get("T_ramp_rate") or "-"
         ramp_rate = f"{ramp_rate:.1f}K/min" if isinstance(ramp_rate, float) else truncate_text(ramp_rate.strip())
         self.widgets.ramp_label.setText(ramp_rate)
 

@@ -38,7 +38,7 @@ class PlotController(QtCore.QObject):
         # Column selection state
         self.chart_columns: list[str] = []
         self.x_column = "time"
-        self.y_column = "timestamp"
+        self.y_column = "T_control"
 
         # Detect system theme and configure colors
         is_dark_theme = self._is_dark_theme()
