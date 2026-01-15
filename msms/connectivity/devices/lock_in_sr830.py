@@ -119,20 +119,10 @@ class LockInSr830(DeviceBase):
 
         Returns True if adjustment was made.
         """
-        try:
-            lias_status_str = self.query_resource("LIAS?")
-            lias_status = int(lias_status_str)
-        except ValueError:
-            logger.exception("Failed to parse LIAS status: %s", lias_status_str)
+        if self.query_resource("LIAS?2").strip() != "1":
             return False
 
-        if not (
-            lias_status & 1  # Input/Reserve Overload
-            or lias_status & 4  # Output Overload
-        ):
-            return False
-
-        logger.warning("Detected overload condition (LIAS=%d). Adjusting settings.", lias_status)
+        logger.warning("Detected overload condition")
 
         try:
             current_sens_str = self.query_resource("SENS?")
