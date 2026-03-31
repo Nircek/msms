@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
@@ -12,9 +13,22 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Threshold for treating a row as significant (normalized to 0.0/1.0 range)
+SIGNIFICANT_THRESHOLD = 0.5
+
 
 def clamp_to_float_precision(value: float) -> float:
     return max(-1e308, min(1e308, value))
+
+
+@dataclass
+class PlotControlWidgets:
+    """Container for plot control UI widgets."""
+
+    auto_follow_checkbox: QtWidgets.QCheckBox
+    only_significant_checkbox: QtWidgets.QCheckBox
+    x_axis_button: QtWidgets.QPushButton
+    y_axis_button: QtWidgets.QPushButton
 
 
 class PlotController(QtCore.QObject):
@@ -23,18 +37,15 @@ class PlotController(QtCore.QObject):
     def __init__(
         self,
         plot_widget: pg.PlotWidget,
-        auto_follow_checkbox: QtWidgets.QCheckBox,
-        only_significant_checkbox: QtWidgets.QCheckBox,
-        x_axis_button: QtWidgets.QPushButton,
-        y_axis_button: QtWidgets.QPushButton,
+        control_widgets: PlotControlWidgets,
         data_repository: DataRepository,
     ) -> None:
         super().__init__()
         self.plot_widget = plot_widget
-        self.auto_follow_checkbox = auto_follow_checkbox
-        self.only_significant_checkbox = only_significant_checkbox
-        self.x_axis_button = x_axis_button
-        self.y_axis_button = y_axis_button
+        self.auto_follow_checkbox = control_widgets.auto_follow_checkbox
+        self.only_significant_checkbox = control_widgets.only_significant_checkbox
+        self.x_axis_button = control_widgets.x_axis_button
+        self.y_axis_button = control_widgets.y_axis_button
         self.data_repository = data_repository
 
         # Column selection state
@@ -188,7 +199,7 @@ class PlotController(QtCore.QObject):
         logger.debug("Refreshing plot with %d samples", data.shape[0])
         filtered = data
         if self.only_significant_checkbox.isChecked() and sig_idx is not None:
-            filtered = data[data[:, sig_idx] >= 0.5]
+            filtered = data[data[:, sig_idx] >= SIGNIFICANT_THRESHOLD]
 
         self.xs = filtered[:, x_idx] if filtered.size else np.array([])
         self.ys = filtered[:, y_idx] if filtered.size else np.array([])

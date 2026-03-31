@@ -11,8 +11,8 @@ from msms.ui.controllers import (
     ControlsController,
     DisplayController,
     DisplayWidgets,
-    PlotController,
 )
+from msms.ui.controllers.plot_controller import PlotController, PlotControlWidgets
 from msms.ui.dialogs import (
     AutomationDialog,
     DeviceCommandDialog,
@@ -63,12 +63,15 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.app_controller = ApplicationController(interval_ms=500)
         self._selected_device_addresses: list[str] = []
 
+        plot_control_widgets = PlotControlWidgets(
+            auto_follow_checkbox=self.autoFollowCheckBox,
+            only_significant_checkbox=self.onlySignificantCheckBox,
+            x_axis_button=self.xAxisPushButton,
+            y_axis_button=self.yAxisPushButton,
+        )
         self.plot_controller = PlotController(
             self.plotWidget,
-            self.autoFollowCheckBox,
-            self.onlySignificantCheckBox,
-            self.xAxisPushButton,
-            self.yAxisPushButton,
+            plot_control_widgets,
             self.app_controller.data_repository,
         )
         self.controls_controller = ControlsController(
@@ -219,7 +222,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         significant_count = 0
         if data.shape != () and "is_significant" in columns:
             sig_idx = list(columns).index("is_significant")
-            significant_count = int((data[:, sig_idx] >= 0.5).sum())
+            # Threshold for treating a row as significant (normalized to 0.0/1.0 range)
+            significant_threshold = 0.5
+            significant_count = int((data[:, sig_idx] >= significant_threshold).sum())
         dialog = ExportDialog(self, available_columns=list(columns), significant_count=significant_count)
         if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
             return
@@ -240,9 +245,13 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             include_comments,
             include_automation_log,
         )
-        self.storage_export_requested.emit(
-            (export_path, selected_columns, include_comments, include_automation_log, only_significant)
-        )
+        self.storage_export_requested.emit((
+            export_path,
+            selected_columns,
+            include_comments,
+            include_automation_log,
+            only_significant,
+        ))
 
     @QtCore.Slot()
     def on_actionHelp_triggered(self) -> None:

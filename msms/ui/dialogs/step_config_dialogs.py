@@ -259,6 +259,16 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
 
         layout = QtWidgets.QFormLayout(self)
 
+        self._create_device_selector(layout, device_info)
+        self._create_temperature_inputs(layout)
+        self._create_stabilization_inputs(layout, column_names)
+        self._create_timing_inputs(layout)
+        self._create_button_box(layout)
+
+    def _create_device_selector(
+        self, layout: QtWidgets.QFormLayout, device_info: dict[str, tuple[str, str]] | None
+    ) -> None:
+        """Create device selection combo box."""
         self.device_combo = QtWidgets.QComboBox()
         self.device_combo.setEditable(False)
         if device_info:
@@ -267,6 +277,8 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
                 self.device_combo.addItem(display_text, address)
         layout.addRow("Device:", self.device_combo)
 
+    def _create_temperature_inputs(self, layout: QtWidgets.QFormLayout) -> None:
+        """Create temperature range input fields."""
         self.t0_spinbox = QtWidgets.QDoubleSpinBox()
         self.t0_spinbox.setRange(0.0, 1000.0)
         self.t0_spinbox.setDecimals(2)
@@ -291,6 +303,8 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.dt_spinbox.setSuffix(" K")
         layout.addRow("Step dT:", self.dt_spinbox)
 
+    def _create_stabilization_inputs(self, layout: QtWidgets.QFormLayout, column_names: list[str] | None) -> None:
+        """Create stabilization criteria input fields."""
         self.column_combo = QtWidgets.QComboBox()
         self.column_combo.setEditable(False)
         allowed_columns = [column for column in (column_names or []) if column.startswith("T_")]
@@ -311,6 +325,8 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.points_spinbox.setValue(10)
         layout.addRow("Number of points to check:", self.points_spinbox)
 
+    def _create_timing_inputs(self, layout: QtWidgets.QFormLayout) -> None:
+        """Create timeout and dwell time input fields."""
         self.timeout_spinbox = QtWidgets.QDoubleSpinBox()
         self.timeout_spinbox.setRange(0.0, 86400.0)
         self.timeout_spinbox.setDecimals(1)
@@ -325,6 +341,8 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.dwell_spinbox.setSuffix(" s")
         layout.addRow("Dwell from command time:", self.dwell_spinbox)
 
+    def _create_button_box(self, layout: QtWidgets.QFormLayout) -> None:
+        """Create OK/Cancel button box."""
         button_box = QtWidgets.QDialogButtonBox(
             QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
         )

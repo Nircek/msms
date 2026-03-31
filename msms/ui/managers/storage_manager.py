@@ -13,6 +13,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Threshold for treating a row as significant (normalized to 0.0/1.0 range)
+SIGNIFICANT_THRESHOLD = 0.5
+
 
 def to_float(s: str) -> str | float:
     """Convert trimmed string to float or return original string."""
@@ -270,7 +273,7 @@ class StorageManager(QtCore.QObject):
         self.csv_persistence.write_row(row)
         self.row_number += 1
         is_significant = parsed_data.get("is_significant")
-        if isinstance(is_significant, float) and is_significant >= 0.5:
+        if isinstance(is_significant, float) and is_significant >= SIGNIFICANT_THRESHOLD:
             self.significant_data_captured.emit()
 
     @QtCore.Slot(object)
@@ -319,15 +322,21 @@ class StorageManager(QtCore.QObject):
         is_significant_value = transformed.get("is_significant")
         if isinstance(is_significant_value, str):
             try:
-                is_significant_numeric = 1.0 if float(is_significant_value.strip()) >= 0.5 else 0.0
+                is_significant_numeric = 1.0 if float(is_significant_value.strip()) >= SIGNIFICANT_THRESHOLD else 0.0
             except ValueError:
                 is_significant_numeric = 0.0
         elif isinstance(is_significant_value, float):
-            is_significant_numeric = 1.0 if is_significant_value >= 0.5 else 0.0
+            is_significant_numeric = 1.0 if is_significant_value >= SIGNIFICANT_THRESHOLD else 0.0
         else:
             is_significant_numeric = 1.0 if self._continuous_points_are_significant else 0.0
         transformed["is_significant"] = is_significant_numeric
-        if self.t0 == 0.0 and "timestamp" in transformed and isinstance(t0 := transformed.get("timestamp"), float):
+        # Use epsilon for near-zero comparison instead of exact equality
+        time_zero_epsilon = 1e-9
+        if (
+            abs(self.t0) < time_zero_epsilon
+            and "timestamp" in transformed
+            and isinstance(t0 := transformed.get("timestamp"), float)
+        ):
             self.t0 = t0
         transformed["time"] = float(transformed.get("timestamp", 0)) - self.t0
         transformed["row_number"] = float(self.row_number)

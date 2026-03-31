@@ -3,7 +3,7 @@
 import logging
 from collections import deque
 from datetime import UTC, datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -155,7 +155,7 @@ class TemperatureSweepStep(Step):
         t0 = _q2(self.t0)
         t1 = _q2(self.t1)
         dt = _q2(self.dt)
-        if dt <= Decimal("0"):
+        if dt <= Decimal(0):
             msg = "Temperature sweep dT must be > 0."
             raise ValueError(msg)
 
@@ -249,7 +249,8 @@ class TemperatureSweepStep(Step):
             capture_delay = (datetime.now(UTC) - self._target_capture_requested_at).total_seconds()
 
         logger.info(
-            "Temperature sweep target completed: target=%s status=%s elapsed_s=%.3f dwell_s=%.3f timeout_s=%.3f capture_delay_s=%.3f",
+            "Temperature sweep target completed: "
+            "target=%s status=%s elapsed_s=%.3f dwell_s=%.3f timeout_s=%.3f capture_delay_s=%.3f",
             f"{target:.2f}",
             self._target_result or "unknown",
             elapsed,

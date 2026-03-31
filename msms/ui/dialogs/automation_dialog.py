@@ -5,8 +5,6 @@ from typing import TYPE_CHECKING
 
 from PySide6 import QtCore, QtWidgets
 
-from msms.ui.automation import step_registry
-
 if TYPE_CHECKING:
     from msms.ui.automation.step_base import Step
     from msms.ui.controllers import ApplicationController
@@ -125,6 +123,9 @@ class AutomationDialog(QtWidgets.QDialog):
 
     def _add_step(self) -> None:
         """Show dialog to add a new step."""
+        # Late import to avoid circular dependency (automation_dialog -> steps -> dialogs)
+        from msms.ui.automation import step_registry  # noqa: PLC0415
+
         # Get list of registered step types
         step_types = [step_class.display_name for step_class in step_registry]
 
@@ -166,6 +167,9 @@ class AutomationDialog(QtWidgets.QDialog):
             return
 
         # Find the step class
+        # Late import to avoid circular dependency (automation_dialog -> steps -> dialogs)
+        from msms.ui.automation import step_registry  # noqa: PLC0415
+
         step_class = None
         for cls in step_registry:
             if cls.display_name == step_type.text():

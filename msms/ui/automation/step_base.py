@@ -60,7 +60,7 @@ class Step(ABC):
         """
 
     @abstractmethod
-    def evaluate(self, runner: AutomationManager, source: "StepEvaluationSource") -> bool:
+    def evaluate(self, runner: AutomationManager, source: StepEvaluationSource) -> bool:
         """Check if conditions for completing this step are met.
 
         Args:
