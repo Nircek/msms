@@ -83,8 +83,7 @@ class LockInSr830(DeviceBase):
         print([self.read_resource().strip() for _ in cmds])
 
     def update(self) -> dict[str, str]:
-        while self._check_and_fix_overload():
-            pass  # keep checking until no overload
+        self._check_and_fix_overload()
 
         phase, frequence, amplitude = (self.query_resource(cmd) for cmd in ("PHAS?", "FREQ?", "SLVL?"))
 
