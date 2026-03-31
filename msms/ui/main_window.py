@@ -66,6 +66,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.plot_controller = PlotController(
             self.plotWidget,
             self.autoFollowCheckBox,
+            self.onlySignificantCheckBox,
             self.xAxisPushButton,
             self.yAxisPushButton,
             self.app_controller.data_repository,
@@ -108,13 +109,31 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         self.controls_controller.acquisition_start_requested.connect(self.device_acquisition_start_requested.emit)
         self.controls_controller.acquisition_stop_requested.connect(self.device_acquisition_stop_requested.emit)
         self.controls_controller.manual_measurement_requested.connect(
-            self.app_controller.managers.device.on_devices_poll_request
+            self.app_controller.managers.device.on_significant_poll_request
         )
         self.controls_controller.interval_change_requested.connect(self._on_interval_change)
+        self.controls_controller.continuous_significance_change_requested.connect(
+            self.app_controller.managers.storage.on_set_continuous_points_significance_request
+        )
         self.controls_controller.automation_edit_requested.connect(self.on_actionManageAutomation_triggered)
         self.controls_controller.automation_start_requested.connect(self.automation_start_requested.emit)
         self.controls_controller.automation_stop_requested.connect(self.automation_stop_requested.emit)
         self.controls_controller.automation_skip_requested.connect(self.automation_skip_forward_requested.emit)
+        self.app_controller.managers.automation.current_step_live_acquisition_required_changed.connect(
+            self.controls_controller.on_current_step_live_acquisition_required_changed
+        )
+        self.app_controller.managers.automation.automation_started.connect(
+            lambda: self.controls_controller.on_automation_running_state_changed(True)
+        )
+        self.app_controller.managers.automation.automation_stopped.connect(
+            lambda: self.controls_controller.on_automation_running_state_changed(False)
+        )
+        self.app_controller.managers.automation.automation_completed.connect(
+            lambda: self.controls_controller.on_automation_running_state_changed(False)
+        )
+        self.app_controller.managers.device.acquisition_state_changed.connect(
+            self.controls_controller.on_acquisition_running_state_changed
+        )
 
         self.comment_controller.description_changed.connect(self.storage_description_change_requested.emit)
 
@@ -196,7 +215,12 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             return
 
         # Show export dialog
-        dialog = ExportDialog(self, available_columns=list(columns))
+        data = self.app_controller.data_repository.data
+        significant_count = 0
+        if data.shape != () and "is_significant" in columns:
+            sig_idx = list(columns).index("is_significant")
+            significant_count = int((data[:, sig_idx] >= 0.5).sum())
+        dialog = ExportDialog(self, available_columns=list(columns), significant_count=significant_count)
         if dialog.exec() != QtWidgets.QDialog.DialogCode.Accepted:
             return
 
@@ -207,6 +231,7 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
         selected_columns = dialog.get_selected_columns()
         include_comments = dialog.get_include_comments()
         include_automation_log = dialog.get_include_automation_log()
+        only_significant = dialog.get_only_significant_points()
 
         logger.info(
             "Exporting data to %s (columns: %d, comments: %s, automation log: %s)",
@@ -215,7 +240,9 @@ class MainWindow(QtWidgets.QMainWindow, Ui_MainWindow):
             include_comments,
             include_automation_log,
         )
-        self.storage_export_requested.emit((export_path, selected_columns, include_comments, include_automation_log))
+        self.storage_export_requested.emit(
+            (export_path, selected_columns, include_comments, include_automation_log, only_significant)
+        )
 
     @QtCore.Slot()
     def on_actionHelp_triggered(self) -> None:

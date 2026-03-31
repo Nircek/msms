@@ -283,6 +283,13 @@
            </widget>
           </item>
           <item>
+           <widget class="QCheckBox" name="onlySignificantCheckBox">
+            <property name="text">
+             <string>Only significant</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="xAxisPushButton">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Minimum" vsizetype="Fixed">

@@ -210,6 +210,8 @@ class CsvPersistenceService:
         columns: list[str] | None = None,
         include_comments: bool = True,
         automation_log: list[tuple[str, str, datetime | None]] | None = None,
+        *,
+        only_significant: bool = False,
     ) -> None:
         """Export current CSV data to a user-provided path.
 
@@ -253,6 +255,8 @@ class CsvPersistenceService:
 
             writer.writeheader()
             for row in reader:
+                if only_significant and row.get("is_significant", "0").strip() not in {"1", "1.0"}:
+                    continue
                 writer.writerow({col: row[col] for col in columns})
 
         logger.info("Exported data to %s", export_path)

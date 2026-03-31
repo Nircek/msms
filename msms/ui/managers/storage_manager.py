@@ -122,6 +122,7 @@ class StorageManager(QtCore.QObject):
     export_completed = QtCore.Signal(object)
     export_failed = QtCore.Signal(object)
     description_changed = QtCore.Signal(object)
+    significant_data_captured = QtCore.Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -133,6 +134,7 @@ class StorageManager(QtCore.QObject):
         self.columns: list[str] = []
         self.number_columns: list[str] = []
         self._automation_log: list[tuple[str, str, datetime | None]] = []
+        self._continuous_points_are_significant = True
 
     @QtCore.Slot()
     def on_setup(self) -> None:
@@ -194,13 +196,13 @@ class StorageManager(QtCore.QObject):
         self._apply_snapshot(snapshot)
 
     @QtCore.Slot(object)
-    def on_export_request(self, request: tuple[Path, list[str] | None, bool, bool]) -> None:
+    def on_export_request(self, request: tuple[Path, list[str] | None, bool, bool, bool]) -> None:
         """Export data to CSV.
 
         Args:
             request: Tuple of (path, columns, include_comments, include_automation_log).
         """
-        export_path, columns, include_comments, include_automation_log = request
+        export_path, columns, include_comments, include_automation_log, only_significant = request
         if export_path is None:
             message = "Export request missing path."
             logger.error(message)
@@ -210,7 +212,13 @@ class StorageManager(QtCore.QObject):
         automation_log = self._automation_log if include_automation_log else None
 
         try:
-            self.csv_persistence.export_to_csv(export_path, columns, include_comments, automation_log)
+            self.csv_persistence.export_to_csv(
+                export_path,
+                columns,
+                include_comments,
+                automation_log,
+                only_significant=only_significant,
+            )
         except Exception:
             logger.exception("Failed to export data to %s", export_path)
             self.export_failed.emit(f"Failed to export data to {export_path}")
@@ -261,6 +269,13 @@ class StorageManager(QtCore.QObject):
         self.new_data_row.emit(parsed_data)
         self.csv_persistence.write_row(row)
         self.row_number += 1
+        if parsed_data.get("is_significant") == 1.0:
+            self.significant_data_captured.emit()
+
+    @QtCore.Slot(object)
+    def on_set_continuous_points_significance_request(self, is_significant: bool) -> None:
+        """Set default significance for timer/manual continuous polls."""
+        self._continuous_points_are_significant = is_significant
 
     def _apply_snapshot(self, snapshot: SessionSnapshot) -> None:
         """Replace in-memory state with the supplied snapshot."""
@@ -300,6 +315,14 @@ class StorageManager(QtCore.QObject):
         """
 
         transformed: dict[str, str | float] = {k: to_float(v) for k, v in data.items()}
+        is_significant_value = transformed.get("is_significant")
+        if isinstance(is_significant_value, str):
+            is_significant_numeric = 1.0 if is_significant_value.strip() == "1" else 0.0
+        elif isinstance(is_significant_value, float):
+            is_significant_numeric = 1.0 if is_significant_value >= 0.5 else 0.0
+        else:
+            is_significant_numeric = 1.0 if self._continuous_points_are_significant else 0.0
+        transformed["is_significant"] = is_significant_numeric
         if self.t0 == 0.0 and "timestamp" in transformed and isinstance(t0 := transformed.get("timestamp"), float):
             self.t0 = t0
         transformed["time"] = float(transformed.get("timestamp", 0)) - self.t0

@@ -14,6 +14,7 @@ class DeviceManager(QtCore.QObject):
     device_info_collected = QtCore.Signal(object)
     data_initialized = QtCore.Signal(object)
     data_collected = QtCore.Signal(object)
+    acquisition_state_changed = QtCore.Signal(object)
 
     def __init__(self, interval_ms: int = 500) -> None:
         """Initialize the manager with a QTimer-based polling mechanism.
@@ -38,6 +39,11 @@ class DeviceManager(QtCore.QObject):
         self._interval_ms = value
         if self._is_running and self._timer is not None:
             self._timer.setInterval(value)
+
+    @property
+    def is_running(self) -> bool:
+        """Check whether acquisition is currently active."""
+        return self._is_running
 
     def initialize_visa(self) -> None:
         """Initialise VISA resources once."""
@@ -73,6 +79,7 @@ class DeviceManager(QtCore.QObject):
 
         logger.info("Initial data collected, starting acquisition.")
         self._is_running = True
+        self.acquisition_state_changed.emit(True)
         self._timer.setInterval(self._interval_ms)
         self._timer.start()
 
@@ -87,12 +94,24 @@ class DeviceManager(QtCore.QObject):
         self.data_collected.emit(data)
 
     @QtCore.Slot()
+    def on_significant_poll_request(self) -> None:
+        """Collect one data point flagged as significant."""
+        if not self._selected_addresses:
+            logger.error("No device addresses configured; cannot poll devices.")
+            return
+
+        data = self._repository.collect_data()
+        data["is_significant"] = "1"
+        self.data_collected.emit(data)
+
+    @QtCore.Slot()
     def on_acquisition_stop_request(self) -> None:
         """Stop polling and clean up device resources."""
         if not self._is_running:
             return
 
         self._is_running = False
+        self.acquisition_state_changed.emit(False)
         if self._timer is not None:
             self._timer.stop()
 

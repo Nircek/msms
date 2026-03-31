@@ -8,7 +8,7 @@ import numpy as np
 from PySide6 import QtWidgets
 
 from msms.ui.automation.register_step import register_step
-from msms.ui.automation.step_base import Step
+from msms.ui.automation.step_base import Step, StepEvaluationSource
 from msms.ui.dialogs.step_config_dialogs import WaitForStableDialog
 
 if TYPE_CHECKING:
@@ -78,11 +78,14 @@ class WaitForStableStep(Step):
         self._recent_values = deque(maxlen=self.num_points)
         return True
 
-    def evaluate(self, runner: AutomationManager) -> bool:
+    def evaluate(self, runner: AutomationManager, source: StepEvaluationSource) -> bool:
         """Check if column is stable via linear regression.
 
         Returns True only if recent measurements show |slope| <= max_slope.
         """
+        if source is not StepEvaluationSource.NEW_DATA:
+            return False
+
         latest_data = runner.get_latest_data()
         if not latest_data or self.column_name not in latest_data:
             return False

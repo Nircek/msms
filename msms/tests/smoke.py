@@ -121,7 +121,7 @@ def main() -> int:
 
         export_dir = Path(tempfile.mkdtemp(prefix="msms_smoke_"))
         export_path = export_dir / "acquisition.csv"
-        test_signals.storage_export_requested.emit((export_path, None))
+        test_signals.storage_export_requested.emit((export_path, None, True, True, False))
         _process_events(app, 0.5)  # Allow time for export signal to complete
 
         if not export_path.exists():

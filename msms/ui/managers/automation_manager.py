@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from PySide6 import QtCore
 
+from msms.ui.automation.step_base import StepEvaluationSource
+
 if TYPE_CHECKING:
     from msms.ui.automation.step_base import Step
 
@@ -26,6 +28,9 @@ class AutomationManager(QtCore.QObject):
     current_step_changed = QtCore.Signal(object)
     automation_log_changed = QtCore.Signal(object)
     device_command_requested = QtCore.Signal(object, object)
+    significant_measurement_requested = QtCore.Signal()
+    current_step_live_acquisition_required_changed = QtCore.Signal(object)
+    active_step_status_changed = QtCore.Signal(object)
     steps_changed = QtCore.Signal(object)
 
     def __init__(self) -> None:
@@ -38,6 +43,9 @@ class AutomationManager(QtCore.QObject):
         self._latest_data: dict[str, str | float] = {}
         self._step_id_counter = 0
         self._step_id_mutex = QtCore.QMutex()
+        self._is_acquisition_running = False
+        self._is_significant_capture_event = False
+        self._awaiting_significant_measurement = False
 
     @QtCore.Slot()
     def on_setup(self) -> None:  # noqa: PLR6301
@@ -61,6 +69,16 @@ class AutomationManager(QtCore.QObject):
     def is_running(self) -> bool:
         """Check if automation is currently running."""
         return self._is_running
+
+    @property
+    def is_acquisition_running(self) -> bool:
+        """Check whether live acquisition is currently running."""
+        return self._is_acquisition_running
+
+    @property
+    def is_significant_capture_event(self) -> bool:
+        """Check whether current NEW_DATA evaluation came from explicit capture."""
+        return self._is_significant_capture_event
 
     @property
     def current_step(self) -> Step | None:
@@ -89,6 +107,11 @@ class AutomationManager(QtCore.QObject):
             command: SCPI command string to send.
         """
         self.device_command_requested.emit(device_address, command)
+
+    def request_significant_measurement(self) -> None:
+        """Request a single explicit significant data capture."""
+        self._awaiting_significant_measurement = True
+        self.significant_measurement_requested.emit()
 
     @QtCore.Slot(object)
     def on_set_steps(self, steps: list[Step]) -> None:
@@ -158,6 +181,9 @@ class AutomationManager(QtCore.QObject):
             self._timer.stop()
 
         logger.info("Automation stopped at step %d", self._current_index)
+        self._awaiting_significant_measurement = False
+        self.current_step_live_acquisition_required_changed.emit(False)
+        self.active_step_status_changed.emit("Automation stopped")
         self.automation_stopped.emit()
 
     @QtCore.Slot()
@@ -183,7 +209,22 @@ class AutomationManager(QtCore.QObject):
         """
         self._latest_data = data
         if self._is_running:
-            self._evaluate_step()
+            self._is_significant_capture_event = False
+            self._evaluate_step(StepEvaluationSource.NEW_DATA)
+
+    @QtCore.Slot()
+    def on_significant_measurement_completed(self) -> None:
+        """Evaluate step after a requested significant measurement was captured."""
+        if self._is_running and self._awaiting_significant_measurement:
+            self._is_significant_capture_event = True
+            self._evaluate_step(StepEvaluationSource.NEW_DATA)
+            self._is_significant_capture_event = False
+            self._awaiting_significant_measurement = False
+
+    @QtCore.Slot(object)
+    def on_acquisition_state_changed(self, is_running: bool) -> None:
+        """Track acquisition running state for step capability logic."""
+        self._is_acquisition_running = is_running
 
     def _start_current_step(self) -> None:
         """Initialize current step and record start timestamp."""
@@ -201,9 +242,11 @@ class AutomationManager(QtCore.QObject):
             logger.exception("Error in on_start for step: %s", current.label)
 
         self.current_step_changed.emit(current)
+        self.current_step_live_acquisition_required_changed.emit(current.requires_live_acquisition)
+        self.active_step_status_changed.emit(current.label)
         self.automation_log_changed.emit(self.get_execution_log())
 
-    def _evaluate_step(self) -> None:
+    def _evaluate_step(self, source: StepEvaluationSource = StepEvaluationSource.TICK) -> None:
         """Check if current step is complete and advance if needed."""
         if not self._is_running:
             return
@@ -214,7 +257,7 @@ class AutomationManager(QtCore.QObject):
             return
 
         try:
-            is_complete = current.evaluate(self)
+            is_complete = current.evaluate(self, source)
         except Exception:
             logger.exception("Error evaluating step: %s", current.label)
             is_complete = False
@@ -245,6 +288,8 @@ class AutomationManager(QtCore.QObject):
 
         logger.info("Automation completed")
         self.current_step_changed.emit(None)
+        self.current_step_live_acquisition_required_changed.emit(False)
+        self.active_step_status_changed.emit("No active step")
         self.automation_completed.emit()
 
     def get_execution_log(self) -> list[tuple[str, str, datetime | None]]:

@@ -24,6 +24,7 @@ class PlotController(QtCore.QObject):
         self,
         plot_widget: pg.PlotWidget,
         auto_follow_checkbox: QtWidgets.QCheckBox,
+        only_significant_checkbox: QtWidgets.QCheckBox,
         x_axis_button: QtWidgets.QPushButton,
         y_axis_button: QtWidgets.QPushButton,
         data_repository: DataRepository,
@@ -31,6 +32,7 @@ class PlotController(QtCore.QObject):
         super().__init__()
         self.plot_widget = plot_widget
         self.auto_follow_checkbox = auto_follow_checkbox
+        self.only_significant_checkbox = only_significant_checkbox
         self.x_axis_button = x_axis_button
         self.y_axis_button = y_axis_button
         self.data_repository = data_repository
@@ -65,6 +67,7 @@ class PlotController(QtCore.QObject):
 
         self.plot_widget.sigRangeChanged.connect(self._on_range_changed)
         self.auto_follow_checkbox.toggled.connect(self._on_auto_follow_toggled)
+        self.only_significant_checkbox.toggled.connect(lambda _checked: self.refresh_data_from_repository())
         self.x_axis_button.clicked.connect(self._on_x_axis_button_clicked)
         self.y_axis_button.clicked.connect(self._on_y_axis_button_clicked)
 
@@ -180,10 +183,15 @@ class PlotController(QtCore.QObject):
 
         x_idx = columns.index(self.x_column)
         y_idx = columns.index(self.y_column)
+        sig_idx = columns.index("is_significant") if "is_significant" in columns else None
 
         logger.debug("Refreshing plot with %d samples", data.shape[0])
-        self.xs = data[:, x_idx]
-        self.ys = data[:, y_idx]
+        filtered = data
+        if self.only_significant_checkbox.isChecked() and sig_idx is not None:
+            filtered = data[data[:, sig_idx] >= 0.5]
+
+        self.xs = filtered[:, x_idx] if filtered.size else np.array([])
+        self.ys = filtered[:, y_idx] if filtered.size else np.array([])
         self.plot_item.setData(self.xs, self.ys)
 
     def _on_range_changed(self, *_args: list[Any]) -> None:
@@ -260,7 +268,7 @@ class PlotController(QtCore.QObject):
     @QtCore.Slot(object)
     def on_columns_change(self, columns: list[str]) -> None:
         """Handle notification that numeric chart columns have changed."""
-        self.chart_columns = columns
+        self.chart_columns = [column for column in columns if column != "is_significant"]
         columns_does_not_exist = not bool(self.chart_columns)
         self.x_axis_button.setDisabled(columns_does_not_exist)
         self.y_axis_button.setDisabled(columns_does_not_exist)

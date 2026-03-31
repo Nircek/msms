@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from PySide6 import QtWidgets
 
 from msms.ui.automation.register_step import register_step
-from msms.ui.automation.step_base import Step
+from msms.ui.automation.step_base import Step, StepEvaluationSource
 from msms.ui.dialogs.step_config_dialogs import WaitForDatetimeDialog
 
 if TYPE_CHECKING:
@@ -52,6 +52,6 @@ class WaitForDatetimeStep(Step):
         self.target_datetime = dialog.get_datetime()
         return True
 
-    def evaluate(self, _runner: AutomationManager) -> bool:
+    def evaluate(self, _runner: AutomationManager, _source: StepEvaluationSource) -> bool:
         """Check if current time has reached target."""
         return datetime.now(UTC) >= self.target_datetime

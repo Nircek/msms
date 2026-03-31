@@ -244,6 +244,112 @@ class WaitForConditionDialog(QtWidgets.QDialog):
         return self.comparison_combo.currentText()
 
 
+class TemperatureSweepDialog(QtWidgets.QDialog):
+    """Dialog for configuring a Temperature Sweep automation step."""
+
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget | None = None,
+        device_info: dict[str, tuple[str, str]] | None = None,
+        column_names: list[str] | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Temperature Sweep Configuration")
+        self.setMinimumWidth(480)
+
+        layout = QtWidgets.QFormLayout(self)
+
+        self.device_combo = QtWidgets.QComboBox()
+        self.device_combo.setEditable(False)
+        if device_info:
+            info = sorted(device_info.items(), key=lambda item: item[1][0].startswith("LakeShore "), reverse=True)
+            for address, (_device_name, display_text) in info:
+                self.device_combo.addItem(display_text, address)
+        layout.addRow("Device:", self.device_combo)
+
+        self.t0_spinbox = QtWidgets.QDoubleSpinBox()
+        self.t0_spinbox.setRange(0.0, 1000.0)
+        self.t0_spinbox.setDecimals(2)
+        self.t0_spinbox.setSingleStep(0.01)
+        self.t0_spinbox.setValue(100.00)
+        self.t0_spinbox.setSuffix(" K")
+        layout.addRow("Start T0:", self.t0_spinbox)
+
+        self.t1_spinbox = QtWidgets.QDoubleSpinBox()
+        self.t1_spinbox.setRange(0.0, 1000.0)
+        self.t1_spinbox.setDecimals(2)
+        self.t1_spinbox.setSingleStep(0.01)
+        self.t1_spinbox.setValue(120.00)
+        self.t1_spinbox.setSuffix(" K")
+        layout.addRow("End T1:", self.t1_spinbox)
+
+        self.dt_spinbox = QtWidgets.QDoubleSpinBox()
+        self.dt_spinbox.setRange(0.01, 100.0)
+        self.dt_spinbox.setDecimals(2)
+        self.dt_spinbox.setSingleStep(0.01)
+        self.dt_spinbox.setValue(0.50)
+        self.dt_spinbox.setSuffix(" K")
+        layout.addRow("Step dT:", self.dt_spinbox)
+
+        self.column_combo = QtWidgets.QComboBox()
+        self.column_combo.setEditable(False)
+        allowed_columns = [column for column in (column_names or []) if column.startswith("T_")]
+        if allowed_columns:
+            self.column_combo.addItems(allowed_columns)
+            if "T_control" in allowed_columns:
+                self.column_combo.setCurrentText("T_control")
+        layout.addRow("Stabilization column:", self.column_combo)
+
+        self.slope_spinbox = QtWidgets.QDoubleSpinBox()
+        self.slope_spinbox.setRange(0.0, 1000.0)
+        self.slope_spinbox.setDecimals(3)
+        self.slope_spinbox.setValue(0.1)
+        layout.addRow("Maximum absolute slope [K/interval]:", self.slope_spinbox)
+
+        self.points_spinbox = QtWidgets.QSpinBox()
+        self.points_spinbox.setRange(3, 100)
+        self.points_spinbox.setValue(10)
+        layout.addRow("Number of points to check:", self.points_spinbox)
+
+        self.timeout_spinbox = QtWidgets.QDoubleSpinBox()
+        self.timeout_spinbox.setRange(0.0, 86400.0)
+        self.timeout_spinbox.setDecimals(1)
+        self.timeout_spinbox.setValue(0.0)
+        self.timeout_spinbox.setSuffix(" s")
+        layout.addRow("Timeout (0 = infinite):", self.timeout_spinbox)
+
+        self.dwell_spinbox = QtWidgets.QDoubleSpinBox()
+        self.dwell_spinbox.setRange(0.0, 86400.0)
+        self.dwell_spinbox.setDecimals(1)
+        self.dwell_spinbox.setValue(0.0)
+        self.dwell_spinbox.setSuffix(" s")
+        layout.addRow("Dwell from command time:", self.dwell_spinbox)
+
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addRow(button_box)
+
+    def get_device_address(self) -> str:
+        return self.device_combo.currentData() or ""
+
+    def set_device_address(self, address: str) -> None:
+        for i in range(self.device_combo.count()):
+            if self.device_combo.itemData(i) == address:
+                self.device_combo.setCurrentIndex(i)
+                return
+
+    def get_column_name(self) -> str:
+        return self.column_combo.currentText().strip()
+
+    def set_column_name(self, column_name: str) -> None:
+        index = self.column_combo.findText(column_name)
+        if index >= 0:
+            self.column_combo.setCurrentIndex(index)
+
+
 class WaitForDatetimeDialog(QtWidgets.QDialog):
     """Dialog for configuring a Wait for Datetime step."""
 
