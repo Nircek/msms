@@ -186,6 +186,7 @@ class TemperatureSweepStep(Step):
             return
 
         target = self._targets[self._target_index]
+        # LakeShore accepts semicolon-separated SCPI segments in one write call.
         command = f"RAMP 0;SETP {target:.2f}"
         runner.send_device_command(self.device_address, command)
         self._target_command_sent_at = datetime.now(UTC)

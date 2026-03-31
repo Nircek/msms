@@ -301,7 +301,7 @@ class ControlsController(QtCore.QObject):
             self._acquisition_running and self._automation_running and self._active_step_requires_live_acquisition
         )
         if self._acquisition_stop_locked:
-            self._acq_button.setToolTip("stop automation first")
+            self._acq_button.setToolTip("Stop automation first")
             self._acq_button.setEnabled(False)
         elif self._acquisition_running:
             self._acq_button.setToolTip("Stop data acquisition")

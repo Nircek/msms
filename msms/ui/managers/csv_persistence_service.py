@@ -255,8 +255,12 @@ class CsvPersistenceService:
 
             writer.writeheader()
             for row in reader:
-                if only_significant and row.get("is_significant", "0").strip() not in {"1", "1.0"}:
-                    continue
+                if only_significant:
+                    try:
+                        if float(row.get("is_significant", "0").strip()) < 0.5:
+                            continue
+                    except ValueError:
+                        continue
                 writer.writerow({col: row[col] for col in columns})
 
         logger.info("Exported data to %s", export_path)

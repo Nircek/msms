@@ -269,7 +269,8 @@ class StorageManager(QtCore.QObject):
         self.new_data_row.emit(parsed_data)
         self.csv_persistence.write_row(row)
         self.row_number += 1
-        if parsed_data.get("is_significant") == 1.0:
+        is_significant = parsed_data.get("is_significant")
+        if isinstance(is_significant, float) and is_significant >= 0.5:
             self.significant_data_captured.emit()
 
     @QtCore.Slot(object)
@@ -317,7 +318,10 @@ class StorageManager(QtCore.QObject):
         transformed: dict[str, str | float] = {k: to_float(v) for k, v in data.items()}
         is_significant_value = transformed.get("is_significant")
         if isinstance(is_significant_value, str):
-            is_significant_numeric = 1.0 if is_significant_value.strip() == "1" else 0.0
+            try:
+                is_significant_numeric = 1.0 if float(is_significant_value.strip()) >= 0.5 else 0.0
+            except ValueError:
+                is_significant_numeric = 0.0
         elif isinstance(is_significant_value, float):
             is_significant_numeric = 1.0 if is_significant_value >= 0.5 else 0.0
         else:
