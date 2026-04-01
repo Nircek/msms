@@ -26,6 +26,8 @@ class AutomationManager(QtCore.QObject):
     current_step_changed = QtCore.Signal(object)
     automation_log_changed = QtCore.Signal(object)
     device_command_requested = QtCore.Signal(object, object)
+    device_acquisition_start_requested = QtCore.Signal()
+    device_acquisition_stop_requested = QtCore.Signal()
     steps_changed = QtCore.Signal(object)
 
     def __init__(self) -> None:
@@ -89,6 +91,14 @@ class AutomationManager(QtCore.QObject):
             command: SCPI command string to send.
         """
         self.device_command_requested.emit(device_address, command)
+
+    def request_device_acquisition_start(self) -> None:
+        """Request device manager to start acquisition."""
+        self.device_acquisition_start_requested.emit()
+
+    def request_device_acquisition_stop(self) -> None:
+        """Request device manager to stop acquisition."""
+        self.device_acquisition_stop_requested.emit()
 
     @QtCore.Slot(object)
     def on_set_steps(self, steps: list[Step]) -> None:

@@ -13,6 +13,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+STEP_TYPE_ORDER: dict[str, int] = {
+    "Start Acquisition": 0,
+    "Set Setpoint": 1,
+    "Wait for Duration": 2,
+    "Wait for Condition": 3,
+    "Wait for Stable": 4,
+    "Wait for Datetime": 5,
+    "Stop Acquisition": 6,
+    "Stop Program": 7,
+}
+
 
 class AutomationDialog(QtWidgets.QDialog):
     """Dialog for creating and editing automation plans."""
@@ -126,7 +137,10 @@ class AutomationDialog(QtWidgets.QDialog):
     def _add_step(self) -> None:
         """Show dialog to add a new step."""
         # Get list of registered step types
-        step_types = [step_class.display_name for step_class in step_registry]
+        step_types = sorted(
+            (step_class.display_name for step_class in step_registry),
+            key=lambda name: (STEP_TYPE_ORDER.get(name, 100), name),
+        )
 
         if not step_types:
             QtWidgets.QMessageBox.warning(
@@ -167,7 +181,7 @@ class AutomationDialog(QtWidgets.QDialog):
 
         # Find the step class
         step_class = None
-        for cls in step_registry:
+        for cls in sorted(step_registry, key=lambda step_cls: (STEP_TYPE_ORDER.get(step_cls.display_name, 100), step_cls.display_name)):
             if cls.display_name == step_type.text():
                 step_class = cls
                 break

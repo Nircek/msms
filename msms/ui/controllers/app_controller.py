@@ -126,6 +126,8 @@ class ApplicationController(QtCore.QObject):
         """Connect automation manager signals to device manager slots."""
         self.managers.automation.automation_log_changed.connect(self.managers.storage.on_automation_log_update)
         self.managers.automation.device_command_requested.connect(self.managers.device.on_device_command_request)
+        self.managers.automation.device_acquisition_start_requested.connect(self.managers.device.on_acquisition_start_request)
+        self.managers.automation.device_acquisition_stop_requested.connect(self.managers.device.on_acquisition_stop_request)
 
     @property
     def data_repository(self) -> DataRepository:
