@@ -18,8 +18,8 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
     QLabel, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
-    QWidget)
+    QPushButton, QSizePolicy, QSpacerItem, QTextEdit,
+    QVBoxLayout, QWidget)
 
 from msms.ui.controllers.comment_controller import DoubleClickPlainTextEdit
 from pyqtgraph import PlotWidget
@@ -246,8 +246,11 @@ class Ui_MainWindow(object):
 
         self.chartConfig.addWidget(self.yAxisPushButton)
 
-        self.chartConfig.setStretch(1, 1)
-        self.chartConfig.setStretch(2, 1)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.chartConfig.addItem(self.horizontalSpacer)
+
+        self.chartConfig.setStretch(4, 1)
 
         self.centerPane.addLayout(self.chartConfig)
 

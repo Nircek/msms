@@ -10,6 +10,35 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _install_select_all_on_focus(widget: QtWidgets.QWidget) -> None:
+    """Install event filter to select all text when widget receives focus.
+
+    Args:
+        widget: Widget to install filter on (QLineEdit, QSpinBox, QDoubleSpinBox).
+    """
+    widget.installEventFilter(_SelectAllOnFocusFilter(widget))
+
+
+class _SelectAllOnFocusFilter(QtCore.QObject):
+    """Event filter that selects all text when widget receives focus."""
+
+    def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:  # noqa: N802, PLR6301
+        """Filter focus events to select all text.
+
+        Args:
+            obj: Object receiving event.
+            event: Event to filter.
+
+        Returns:
+            False to allow event propagation.
+        """
+        if event.type() == QtCore.QEvent.Type.FocusIn and isinstance(
+            obj, (QtWidgets.QLineEdit, QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)
+        ):
+            obj.selectAll()
+        return False
+
+
 class DescriptionDialog(QtWidgets.QDialog):
     """Dialog for creating structured automation descriptions with predefined sections."""
 
@@ -58,11 +87,13 @@ class DescriptionDialog(QtWidgets.QDialog):
         # Paper logbook ID
         self.logbook_id_edit = QtWidgets.QLineEdit()
         self.logbook_id_edit.setPlaceholderText("e.g., LB-2025-001")
+        _install_select_all_on_focus(self.logbook_id_edit)
         form_layout.addRow("Paper Logbook ID:", self.logbook_id_edit)
 
         # Experimenter's name
         self.experimenter_edit = QtWidgets.QLineEdit()
         self.experimenter_edit.setPlaceholderText("Full name")
+        _install_select_all_on_focus(self.experimenter_edit)
         form_layout.addRow("Experimenter's Name:", self.experimenter_edit)
 
         # Date
@@ -75,11 +106,13 @@ class DescriptionDialog(QtWidgets.QDialog):
         # Duration
         self.duration_edit = QtWidgets.QLineEdit()
         self.duration_edit.setPlaceholderText("e.g., 2 hours, 3 days")
+        _install_select_all_on_focus(self.duration_edit)
         form_layout.addRow("Duration:", self.duration_edit)
 
         # Material / Sample number
         self.sample_edit = QtWidgets.QLineEdit()
         self.sample_edit.setPlaceholderText("e.g., Sample #42, CuO-123")
+        _install_select_all_on_focus(self.sample_edit)
         form_layout.addRow("Material / Sample Number:", self.sample_edit)
 
         # Measured parameters

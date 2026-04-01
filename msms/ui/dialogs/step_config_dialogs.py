@@ -3,9 +3,38 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 logger = logging.getLogger(__name__)
+
+
+def _install_select_all_on_focus(widget: QtWidgets.QWidget) -> None:
+    """Install event filter to select all text when widget receives focus.
+
+    Args:
+        widget: Widget to install filter on (QLineEdit, QSpinBox, QDoubleSpinBox).
+    """
+    widget.installEventFilter(_SelectAllOnFocusFilter(widget))
+
+
+class _SelectAllOnFocusFilter(QtCore.QObject):
+    """Event filter that selects all text when widget receives focus."""
+
+    def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:  # noqa: N802, PLR6301
+        """Filter focus events to select all text.
+
+        Args:
+            obj: Object receiving event.
+            event: Event to filter.
+
+        Returns:
+            False to allow event propagation.
+        """
+        if event.type() == QtCore.QEvent.Type.FocusIn and isinstance(
+            obj, (QtWidgets.QLineEdit, QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)
+        ):
+            obj.selectAll()
+        return False
 
 
 class SetSetpointDialog(QtWidgets.QDialog):
@@ -44,12 +73,14 @@ class SetSetpointDialog(QtWidgets.QDialog):
         self.value_spinbox.setValue(300.0)
         self.value_spinbox.setDecimals(1)
         self.value_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.value_spinbox)
         layout.addRow("Setpoint Value:", self.value_spinbox)
         self.ramp_rate_spinbox = QtWidgets.QDoubleSpinBox()
         self.ramp_rate_spinbox.setRange(0.0, 100.0)
         self.ramp_rate_spinbox.setValue(0.0)
         self.ramp_rate_spinbox.setDecimals(1)
         self.ramp_rate_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.ramp_rate_spinbox)
         layout.addRow("Ramp Rate:", self.ramp_rate_spinbox)
 
         # Buttons
@@ -102,6 +133,7 @@ class WaitForDurationDialog(QtWidgets.QDialog):
         self.duration_spinbox.setValue(10.0)
         self.duration_spinbox.setDecimals(1)
         self.duration_spinbox.setSuffix(" seconds")
+        _install_select_all_on_focus(self.duration_spinbox)
         layout.addRow("Duration:", self.duration_spinbox)
 
         # Buttons
@@ -145,12 +177,14 @@ class WaitForStableDialog(QtWidgets.QDialog):
         self.slope_spinbox.setRange(0.0, 1000.0)
         self.slope_spinbox.setValue(0.1)
         self.slope_spinbox.setDecimals(2)
+        _install_select_all_on_focus(self.slope_spinbox)
         layout.addRow("Maximum Absolute Slope:", self.slope_spinbox)
 
         # Number of points input
         self.points_spinbox = QtWidgets.QSpinBox()
         self.points_spinbox.setRange(3, 100)
         self.points_spinbox.setValue(10)
+        _install_select_all_on_focus(self.points_spinbox)
         layout.addRow("Number of Points to Check:", self.points_spinbox)
 
         # Buttons
@@ -209,6 +243,7 @@ class WaitForConditionDialog(QtWidgets.QDialog):
         self.threshold_spinbox.setRange(-1000000.0, 1000000.0)
         self.threshold_spinbox.setValue(100.0)
         self.threshold_spinbox.setDecimals(2)
+        _install_select_all_on_focus(self.threshold_spinbox)
         layout.addRow("Threshold Value:", self.threshold_spinbox)
 
         # Comparison operator
@@ -285,6 +320,7 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.t0_spinbox.setSingleStep(0.01)
         self.t0_spinbox.setValue(100.00)
         self.t0_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.t0_spinbox)
         layout.addRow("Start T0:", self.t0_spinbox)
 
         self.t1_spinbox = QtWidgets.QDoubleSpinBox()
@@ -293,6 +329,7 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.t1_spinbox.setSingleStep(0.01)
         self.t1_spinbox.setValue(120.00)
         self.t1_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.t1_spinbox)
         layout.addRow("End T1:", self.t1_spinbox)
 
         self.dt_spinbox = QtWidgets.QDoubleSpinBox()
@@ -301,6 +338,7 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.dt_spinbox.setSingleStep(0.01)
         self.dt_spinbox.setValue(0.50)
         self.dt_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.dt_spinbox)
         layout.addRow("Step dT:", self.dt_spinbox)
 
     def _create_stabilization_inputs(self, layout: QtWidgets.QFormLayout, column_names: list[str] | None) -> None:
@@ -318,11 +356,13 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.slope_spinbox.setRange(0.0, 1000.0)
         self.slope_spinbox.setDecimals(3)
         self.slope_spinbox.setValue(0.1)
+        _install_select_all_on_focus(self.slope_spinbox)
         layout.addRow("Maximum absolute slope [K/interval]:", self.slope_spinbox)
 
         self.points_spinbox = QtWidgets.QSpinBox()
         self.points_spinbox.setRange(3, 100)
         self.points_spinbox.setValue(10)
+        _install_select_all_on_focus(self.points_spinbox)
         layout.addRow("Number of points to check:", self.points_spinbox)
 
     def _create_timing_inputs(self, layout: QtWidgets.QFormLayout) -> None:
@@ -332,6 +372,7 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.timeout_spinbox.setDecimals(1)
         self.timeout_spinbox.setValue(0.0)
         self.timeout_spinbox.setSuffix(" s")
+        _install_select_all_on_focus(self.timeout_spinbox)
         layout.addRow("Timeout (0 = infinite):", self.timeout_spinbox)
 
         self.dwell_spinbox = QtWidgets.QDoubleSpinBox()
@@ -339,6 +380,7 @@ class TemperatureSweepDialog(QtWidgets.QDialog):
         self.dwell_spinbox.setDecimals(1)
         self.dwell_spinbox.setValue(0.0)
         self.dwell_spinbox.setSuffix(" s")
+        _install_select_all_on_focus(self.dwell_spinbox)
         layout.addRow("Dwell from command time:", self.dwell_spinbox)
 
     def _create_button_box(self, layout: QtWidgets.QFormLayout) -> None:
@@ -388,6 +430,7 @@ class WaitForDatetimeDialog(QtWidgets.QDialog):
         future_time = datetime.now(UTC) + timedelta(minutes=5)
         self.datetime_edit.setText(future_time.isoformat())
         self.datetime_edit.setPlaceholderText("ISO format: YYYY-MM-DDTHH:MM:SS+00:00")
+        _install_select_all_on_focus(self.datetime_edit)
         layout.addRow("Target Datetime:", self.datetime_edit)
 
         # Help text
