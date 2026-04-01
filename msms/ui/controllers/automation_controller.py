@@ -25,6 +25,7 @@ class AutomationController(QtCore.QObject):
         # Connect to automation manager signals
         self.app_controller.managers.automation.current_step_changed.connect(self._on_automation_step_changed)
         self.app_controller.managers.automation.automation_completed.connect(self._on_automation_completed)
+        self.app_controller.managers.automation.active_step_status_changed.connect(self._on_active_step_status_changed)
 
     @QtCore.Slot(object)
     def _on_automation_step_changed(self, current_step: Step | None) -> None:
@@ -68,3 +69,8 @@ class AutomationController(QtCore.QObject):
             'margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;">'
             '<span style=" font-weight:700;">EXPERIMENT COMPLETED</span></p></body></html>'
         )
+
+    @QtCore.Slot(object)
+    def _on_active_step_status_changed(self, status: str) -> None:
+        """Show runtime step status emitted by active step implementations."""
+        self.automation_plan_text.setPlainText(status)

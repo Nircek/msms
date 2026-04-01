@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from PySide6 import QtWidgets
 
 from msms.ui.automation.register_step import register_step
-from msms.ui.automation.step_base import Step
+from msms.ui.automation.step_base import Step, StepEvaluationSource
 from msms.ui.dialogs.step_config_dialogs import WaitForConditionDialog
 
 if TYPE_CHECKING:
@@ -78,12 +78,15 @@ class WaitForConditionStep(Step):
         self.comparison = dialog.get_comparison()
         return True
 
-    def evaluate(self, runner: AutomationManager) -> bool:
+    def evaluate(self, runner: AutomationManager, source: StepEvaluationSource) -> bool:
         """Check if latest data meets threshold condition.
 
         Returns True only if last 3 measurements all meet the condition
         to account for noise.
         """
+        if source is not StepEvaluationSource.NEW_DATA:
+            return False
+
         latest_data = runner.get_latest_data()
         if not latest_data or self.column_name not in latest_data:
             return False

@@ -3,9 +3,38 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from PySide6 import QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 logger = logging.getLogger(__name__)
+
+
+def _install_select_all_on_focus(widget: QtWidgets.QWidget) -> None:
+    """Install event filter to select all text when widget receives focus.
+
+    Args:
+        widget: Widget to install filter on (QLineEdit, QSpinBox, QDoubleSpinBox).
+    """
+    widget.installEventFilter(_SelectAllOnFocusFilter(widget))
+
+
+class _SelectAllOnFocusFilter(QtCore.QObject):
+    """Event filter that selects all text when widget receives focus."""
+
+    def eventFilter(self, obj: QtCore.QObject, event: QtCore.QEvent) -> bool:  # noqa: N802, PLR6301
+        """Filter focus events to select all text.
+
+        Args:
+            obj: Object receiving event.
+            event: Event to filter.
+
+        Returns:
+            False to allow event propagation.
+        """
+        if event.type() == QtCore.QEvent.Type.FocusIn and isinstance(
+            obj, (QtWidgets.QLineEdit, QtWidgets.QSpinBox, QtWidgets.QDoubleSpinBox)
+        ):
+            obj.selectAll()
+        return False
 
 
 class SetSetpointDialog(QtWidgets.QDialog):
@@ -44,12 +73,14 @@ class SetSetpointDialog(QtWidgets.QDialog):
         self.value_spinbox.setValue(300.0)
         self.value_spinbox.setDecimals(1)
         self.value_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.value_spinbox)
         layout.addRow("Setpoint Value:", self.value_spinbox)
         self.ramp_rate_spinbox = QtWidgets.QDoubleSpinBox()
         self.ramp_rate_spinbox.setRange(0.0, 100.0)
         self.ramp_rate_spinbox.setValue(0.0)
         self.ramp_rate_spinbox.setDecimals(1)
         self.ramp_rate_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.ramp_rate_spinbox)
         layout.addRow("Ramp Rate:", self.ramp_rate_spinbox)
 
         # Buttons
@@ -102,6 +133,7 @@ class WaitForDurationDialog(QtWidgets.QDialog):
         self.duration_spinbox.setValue(10.0)
         self.duration_spinbox.setDecimals(1)
         self.duration_spinbox.setSuffix(" seconds")
+        _install_select_all_on_focus(self.duration_spinbox)
         layout.addRow("Duration:", self.duration_spinbox)
 
         # Buttons
@@ -145,12 +177,14 @@ class WaitForStableDialog(QtWidgets.QDialog):
         self.slope_spinbox.setRange(0.0, 1000.0)
         self.slope_spinbox.setValue(0.1)
         self.slope_spinbox.setDecimals(2)
+        _install_select_all_on_focus(self.slope_spinbox)
         layout.addRow("Maximum Absolute Slope:", self.slope_spinbox)
 
         # Number of points input
         self.points_spinbox = QtWidgets.QSpinBox()
         self.points_spinbox.setRange(3, 100)
         self.points_spinbox.setValue(10)
+        _install_select_all_on_focus(self.points_spinbox)
         layout.addRow("Number of Points to Check:", self.points_spinbox)
 
         # Buttons
@@ -209,6 +243,7 @@ class WaitForConditionDialog(QtWidgets.QDialog):
         self.threshold_spinbox.setRange(-1000000.0, 1000000.0)
         self.threshold_spinbox.setValue(100.0)
         self.threshold_spinbox.setDecimals(2)
+        _install_select_all_on_focus(self.threshold_spinbox)
         layout.addRow("Threshold Value:", self.threshold_spinbox)
 
         # Comparison operator
@@ -244,6 +279,137 @@ class WaitForConditionDialog(QtWidgets.QDialog):
         return self.comparison_combo.currentText()
 
 
+class TemperatureSweepDialog(QtWidgets.QDialog):
+    """Dialog for configuring a Temperature Sweep automation step."""
+
+    def __init__(
+        self,
+        parent: QtWidgets.QWidget | None = None,
+        device_info: dict[str, tuple[str, str]] | None = None,
+        column_names: list[str] | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.setWindowTitle("Temperature Sweep Configuration")
+        self.setMinimumWidth(480)
+
+        layout = QtWidgets.QFormLayout(self)
+
+        self._create_device_selector(layout, device_info)
+        self._create_temperature_inputs(layout)
+        self._create_stabilization_inputs(layout, column_names)
+        self._create_timing_inputs(layout)
+        self._create_button_box(layout)
+
+    def _create_device_selector(
+        self, layout: QtWidgets.QFormLayout, device_info: dict[str, tuple[str, str]] | None
+    ) -> None:
+        """Create device selection combo box."""
+        self.device_combo = QtWidgets.QComboBox()
+        self.device_combo.setEditable(False)
+        if device_info:
+            info = sorted(device_info.items(), key=lambda item: item[1][0].startswith("LakeShore "), reverse=True)
+            for address, (_device_name, display_text) in info:
+                self.device_combo.addItem(display_text, address)
+        layout.addRow("Device:", self.device_combo)
+
+    def _create_temperature_inputs(self, layout: QtWidgets.QFormLayout) -> None:
+        """Create temperature range input fields."""
+        self.t0_spinbox = QtWidgets.QDoubleSpinBox()
+        self.t0_spinbox.setRange(0.0, 1000.0)
+        self.t0_spinbox.setDecimals(2)
+        self.t0_spinbox.setSingleStep(0.01)
+        self.t0_spinbox.setValue(100.00)
+        self.t0_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.t0_spinbox)
+        layout.addRow("Start T0:", self.t0_spinbox)
+
+        self.t1_spinbox = QtWidgets.QDoubleSpinBox()
+        self.t1_spinbox.setRange(0.0, 1000.0)
+        self.t1_spinbox.setDecimals(2)
+        self.t1_spinbox.setSingleStep(0.01)
+        self.t1_spinbox.setValue(120.00)
+        self.t1_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.t1_spinbox)
+        layout.addRow("End T1:", self.t1_spinbox)
+
+        self.dt_spinbox = QtWidgets.QDoubleSpinBox()
+        self.dt_spinbox.setRange(0.01, 100.0)
+        self.dt_spinbox.setDecimals(2)
+        self.dt_spinbox.setSingleStep(0.01)
+        self.dt_spinbox.setValue(0.50)
+        self.dt_spinbox.setSuffix(" K")
+        _install_select_all_on_focus(self.dt_spinbox)
+        layout.addRow("Step dT:", self.dt_spinbox)
+
+    def _create_stabilization_inputs(self, layout: QtWidgets.QFormLayout, column_names: list[str] | None) -> None:
+        """Create stabilization criteria input fields."""
+        self.column_combo = QtWidgets.QComboBox()
+        self.column_combo.setEditable(False)
+        allowed_columns = [column for column in (column_names or []) if column.startswith("T_")]
+        if allowed_columns:
+            self.column_combo.addItems(allowed_columns)
+            if "T_control" in allowed_columns:
+                self.column_combo.setCurrentText("T_control")
+        layout.addRow("Stabilization column:", self.column_combo)
+
+        self.slope_spinbox = QtWidgets.QDoubleSpinBox()
+        self.slope_spinbox.setRange(0.0, 1000.0)
+        self.slope_spinbox.setDecimals(3)
+        self.slope_spinbox.setValue(0.1)
+        _install_select_all_on_focus(self.slope_spinbox)
+        layout.addRow("Maximum absolute slope [K/interval]:", self.slope_spinbox)
+
+        self.points_spinbox = QtWidgets.QSpinBox()
+        self.points_spinbox.setRange(3, 100)
+        self.points_spinbox.setValue(10)
+        _install_select_all_on_focus(self.points_spinbox)
+        layout.addRow("Number of points to check:", self.points_spinbox)
+
+    def _create_timing_inputs(self, layout: QtWidgets.QFormLayout) -> None:
+        """Create timeout and dwell time input fields."""
+        self.timeout_spinbox = QtWidgets.QDoubleSpinBox()
+        self.timeout_spinbox.setRange(0.0, 86400.0)
+        self.timeout_spinbox.setDecimals(1)
+        self.timeout_spinbox.setValue(0.0)
+        self.timeout_spinbox.setSuffix(" s")
+        _install_select_all_on_focus(self.timeout_spinbox)
+        layout.addRow("Timeout (0 = infinite):", self.timeout_spinbox)
+
+        self.dwell_spinbox = QtWidgets.QDoubleSpinBox()
+        self.dwell_spinbox.setRange(0.0, 86400.0)
+        self.dwell_spinbox.setDecimals(1)
+        self.dwell_spinbox.setValue(0.0)
+        self.dwell_spinbox.setSuffix(" s")
+        _install_select_all_on_focus(self.dwell_spinbox)
+        layout.addRow("Dwell from command time:", self.dwell_spinbox)
+
+    def _create_button_box(self, layout: QtWidgets.QFormLayout) -> None:
+        """Create OK/Cancel button box."""
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
+        )
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addRow(button_box)
+
+    def get_device_address(self) -> str:
+        return self.device_combo.currentData() or ""
+
+    def set_device_address(self, address: str) -> None:
+        for i in range(self.device_combo.count()):
+            if self.device_combo.itemData(i) == address:
+                self.device_combo.setCurrentIndex(i)
+                return
+
+    def get_column_name(self) -> str:
+        return self.column_combo.currentText().strip()
+
+    def set_column_name(self, column_name: str) -> None:
+        index = self.column_combo.findText(column_name)
+        if index >= 0:
+            self.column_combo.setCurrentIndex(index)
+
+
 class WaitForDatetimeDialog(QtWidgets.QDialog):
     """Dialog for configuring a Wait for Datetime step."""
 
@@ -264,6 +430,7 @@ class WaitForDatetimeDialog(QtWidgets.QDialog):
         future_time = datetime.now(UTC) + timedelta(minutes=5)
         self.datetime_edit.setText(future_time.isoformat())
         self.datetime_edit.setPlaceholderText("ISO format: YYYY-MM-DDTHH:MM:SS+00:00")
+        _install_select_all_on_focus(self.datetime_edit)
         layout.addRow("Target Datetime:", self.datetime_edit)
 
         # Help text

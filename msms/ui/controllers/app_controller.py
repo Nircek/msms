@@ -117,15 +117,22 @@ class ApplicationController(QtCore.QObject):
         """Connect device manager signals to storage manager slots."""
         self.managers.device.data_initialized.connect(self.managers.storage.on_header_set_request)
         self.managers.device.data_collected.connect(self.managers.storage.on_data_append_request)
+        self.managers.device.acquisition_state_changed.connect(self.managers.automation.on_acquisition_state_changed)
 
     def _connect_storage_to_automation(self) -> None:
         """Connect storage manager signals to automation manager slots."""
         self.managers.storage.new_data_row.connect(self.managers.automation.on_data_update)
+        self.managers.storage.significant_data_captured.connect(
+            self.managers.automation.on_significant_measurement_completed
+        )
 
     def _connect_automation_to_device(self) -> None:
         """Connect automation manager signals to device manager slots."""
         self.managers.automation.automation_log_changed.connect(self.managers.storage.on_automation_log_update)
         self.managers.automation.device_command_requested.connect(self.managers.device.on_device_command_request)
+        self.managers.automation.significant_measurement_requested.connect(
+            self.managers.device.on_significant_poll_request
+        )
 
     @property
     def data_repository(self) -> DataRepository:

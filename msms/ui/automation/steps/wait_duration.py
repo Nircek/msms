@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from PySide6 import QtWidgets
 
 from msms.ui.automation.register_step import register_step
-from msms.ui.automation.step_base import Step
+from msms.ui.automation.step_base import Step, StepEvaluationSource
 from msms.ui.dialogs.step_config_dialogs import WaitForDurationDialog
 
 if TYPE_CHECKING:
@@ -52,7 +52,7 @@ class WaitForDurationStep(Step):
         self.duration_seconds = dialog.get_duration()
         return True
 
-    def evaluate(self, _runner: AutomationManager) -> bool:
+    def evaluate(self, _runner: AutomationManager, _source: StepEvaluationSource) -> bool:
         """Check if duration has elapsed since step start."""
         if self.start_timestamp is None:
             return False

@@ -15,6 +15,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Threshold for treating a row as significant (normalized to 0.0/1.0 range)
+SIGNIFICANT_THRESHOLD = 0.5
+
 
 @dataclass(slots=True)
 class SessionSnapshot:
@@ -210,6 +213,8 @@ class CsvPersistenceService:
         columns: list[str] | None = None,
         include_comments: bool = True,
         automation_log: list[tuple[str, str, datetime | None]] | None = None,
+        *,
+        only_significant: bool = False,
     ) -> None:
         """Export current CSV data to a user-provided path.
 
@@ -234,25 +239,39 @@ class CsvPersistenceService:
             if columns is None:
                 columns = list(reader.fieldnames or [])
 
-            # Write description and metadata if requested
             if include_comments:
-                if self.description:
-                    outfile.write("\n".join(f"# {line}" for line in self.description.splitlines()) + "\n")
-
-                # Write automation log if provided
-                if automation_log:
-                    outfile.write("#\n# Automation Log:\n")
-                    for step_id, label, timestamp in automation_log:
-                        if timestamp is not None:
-                            ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
-                            outfile.write(f"# {step_id}: {label} (started: {ts_str})\n")
-                        else:
-                            outfile.write(f"# {step_id}: {label} (not started)\n")
+                self._write_export_metadata(outfile, automation_log)
 
             writer = csv.DictWriter(outfile, fieldnames=columns)
-
             writer.writeheader()
+
             for row in reader:
+                if only_significant and not self._is_row_significant(row):
+                    continue
                 writer.writerow({col: row[col] for col in columns})
 
         logger.info("Exported data to %s", export_path)
+
+    def _write_export_metadata(
+        self, outfile: TextIOWrapper, automation_log: list[tuple[str, str, datetime | None]] | None
+    ) -> None:
+        """Write description and automation log as comments."""
+        if self.description:
+            outfile.write("\n".join(f"# {line}" for line in self.description.splitlines()) + "\n")
+
+        if automation_log:
+            outfile.write("#\n# Automation Log:\n")
+            for step_id, label, timestamp in automation_log:
+                if timestamp is not None:
+                    ts_str = timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp)
+                    outfile.write(f"# {step_id}: {label} (started: {ts_str})\n")
+                else:
+                    outfile.write(f"# {step_id}: {label} (not started)\n")
+
+    @staticmethod
+    def _is_row_significant(row: dict[str, str]) -> bool:
+        """Check if a row meets the significance threshold."""
+        try:
+            return float(row.get("is_significant", "0").strip()) >= SIGNIFICANT_THRESHOLD
+        except ValueError:
+            return False

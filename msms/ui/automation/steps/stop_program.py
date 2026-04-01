@@ -4,7 +4,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from msms.ui.automation.register_step import register_step
-from msms.ui.automation.step_base import Step
+from msms.ui.automation.step_base import Step, StepEvaluationSource
 
 if TYPE_CHECKING:
     from PySide6 import QtWidgets
@@ -39,6 +39,6 @@ class StopProgramStep(Step):
         """Request automation to stop."""
         logger.info("Stop program step activated")
 
-    def evaluate(self, _runner: AutomationManager) -> bool:  # noqa: PLR6301
+    def evaluate(self, _runner: AutomationManager, _source: StepEvaluationSource) -> bool:  # noqa: PLR6301
         """Complete immediately, triggering automation stop."""
         return True

@@ -1,6 +1,7 @@
 """Base class for automation steps."""
 
 from abc import ABC, abstractmethod
+from enum import Enum
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -22,6 +23,7 @@ class Step(ABC):
     """
 
     display_name: str = "Step"  # Set by @register_step decorator
+    requires_live_acquisition: bool = False
 
     def __init__(self, step_id: str) -> None:
         """Initialize step with unique ID and default parameters.
@@ -58,12 +60,13 @@ class Step(ABC):
         """
 
     @abstractmethod
-    def evaluate(self, runner: AutomationManager) -> bool:
+    def evaluate(self, runner: AutomationManager, source: StepEvaluationSource) -> bool:
         """Check if conditions for completing this step are met.
 
         Args:
             runner: Reference to the automation manager providing
                    access to data, devices, and other services.
+            source: Invocation source (new data event or periodic timer tick).
 
         Returns:
             True if step is complete and runner should advance,
@@ -89,3 +92,10 @@ class Step(ABC):
         Args:
             runner: Reference to the automation manager.
         """
+
+
+class StepEvaluationSource(Enum):
+    """Source of step evaluation invocation."""
+
+    TICK = "tick"
+    NEW_DATA = "new_data"

@@ -18,8 +18,8 @@ from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
     QTransform)
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QHBoxLayout,
     QLabel, QMainWindow, QMenu, QMenuBar,
-    QPushButton, QSizePolicy, QTextEdit, QVBoxLayout,
-    QWidget)
+    QPushButton, QSizePolicy, QSpacerItem, QTextEdit,
+    QVBoxLayout, QWidget)
 
 from msms.ui.controllers.comment_controller import DoubleClickPlainTextEdit
 from pyqtgraph import PlotWidget
@@ -224,6 +224,11 @@ class Ui_MainWindow(object):
 
         self.chartConfig.addWidget(self.autoFollowCheckBox)
 
+        self.onlySignificantCheckBox = QCheckBox(self.centralWidget)
+        self.onlySignificantCheckBox.setObjectName(u"onlySignificantCheckBox")
+
+        self.chartConfig.addWidget(self.onlySignificantCheckBox)
+
         self.xAxisPushButton = QPushButton(self.centralWidget)
         self.xAxisPushButton.setObjectName(u"xAxisPushButton")
         sizePolicy = QSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
@@ -241,8 +246,11 @@ class Ui_MainWindow(object):
 
         self.chartConfig.addWidget(self.yAxisPushButton)
 
-        self.chartConfig.setStretch(1, 1)
-        self.chartConfig.setStretch(2, 1)
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        self.chartConfig.addItem(self.horizontalSpacer)
+
+        self.chartConfig.setStretch(4, 1)
 
         self.centerPane.addLayout(self.chartConfig)
 
@@ -325,6 +333,7 @@ class Ui_MainWindow(object):
         self.rampValue.setText(QCoreApplication.translate("MainWindow", u"0.1K/min", None))
         self.commentPlainTextEdit.setPlaceholderText(QCoreApplication.translate("MainWindow", u"You can write CSV header here at any time before the export. Also, you can double click to use a template.", None))
         self.autoFollowCheckBox.setText(QCoreApplication.translate("MainWindow", u"Follow", None))
+        self.onlySignificantCheckBox.setText(QCoreApplication.translate("MainWindow", u"Only significant", None))
         self.xAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"X: time", None))
         self.yAxisPushButton.setText(QCoreApplication.translate("MainWindow", u"Y: value", None))
         self.variablesTextEdit.setHtml(QCoreApplication.translate("MainWindow", u"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"

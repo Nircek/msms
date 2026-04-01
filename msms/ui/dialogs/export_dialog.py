@@ -23,6 +23,7 @@ class ExportDialog(QtWidgets.QDialog):
         self,
         parent: QtWidgets.QWidget,
         available_columns: list[str],
+        significant_count: int = 0,
         default_path: Path | None = None,
     ) -> None:
         super().__init__(parent)
@@ -31,6 +32,7 @@ class ExportDialog(QtWidgets.QDialog):
         self.setMinimumHeight(400)
 
         self._available_columns = available_columns
+        self._significant_count = significant_count
         self._default_path = default_path
         self._selected_path: Path | None = None
         self._setup_ui()
@@ -101,6 +103,16 @@ class ExportDialog(QtWidgets.QDialog):
         self.include_automation_log_checkbox.setChecked(True)
         format_layout.addWidget(self.include_automation_log_checkbox)
 
+        self.only_significant_checkbox = QtWidgets.QCheckBox("Only significant points")
+        self.only_significant_checkbox.setChecked(True)
+        self.only_significant_checkbox.toggled.connect(self._update_significant_count_hint)
+        format_layout.addWidget(self.only_significant_checkbox)
+
+        self.significant_count_hint = QtWidgets.QLabel()
+        self.significant_count_hint.setStyleSheet("QLabel { color: gray; font-size: 9pt; }")
+        format_layout.addWidget(self.significant_count_hint)
+        self._update_significant_count_hint()
+
         layout.addWidget(format_group)
 
         # Dialog buttons
@@ -148,6 +160,14 @@ class ExportDialog(QtWidgets.QDialog):
             self.column_order_hint.setText("No columns selected")
 
     @QtCore.Slot()
+    def _update_significant_count_hint(self) -> None:
+        """Update hint text with current significant export scope."""
+        if self.only_significant_checkbox.isChecked():
+            self.significant_count_hint.setText(f"{self._significant_count} points will be exported")
+        else:
+            self.significant_count_hint.setText("All points will be exported")
+
+    @QtCore.Slot()
     def _validate_and_accept(self) -> None:
         """Validate selections and accept dialog."""
         if not self._selected_path:
@@ -176,3 +196,7 @@ class ExportDialog(QtWidgets.QDialog):
     def get_include_automation_log(self) -> bool:
         """Return whether to include automation log in export."""
         return self.include_automation_log_checkbox.isChecked()
+
+    def get_only_significant_points(self) -> bool:
+        """Return whether export should include only significant rows."""
+        return self.only_significant_checkbox.isChecked()

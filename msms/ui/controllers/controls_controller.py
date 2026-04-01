@@ -33,6 +33,7 @@ class ControlsController(QtCore.QObject):
     acquisition_stop_requested = QtCore.Signal()
     manual_measurement_requested = QtCore.Signal()
     interval_change_requested = QtCore.Signal(int)
+    continuous_significance_change_requested = QtCore.Signal(object)
 
     # Automation signals
     automation_edit_requested = QtCore.Signal()
@@ -46,9 +47,12 @@ class ControlsController(QtCore.QObject):
         self.app_controller = app_controller
 
         # State tracking
-        self._acquisition_running = True  # it will be changed during initialization
-        self._automation_running = True  # it will be changed during initialization
+        self._acquisition_running = False
+        self._automation_running = False
         self._devices_selected = False
+        self._active_step_requires_live_acquisition = False
+        self._acquisition_stop_locked = False
+        self._continuous_significance_enabled = True
 
         # Widget references
         self._layout = QtWidgets.QVBoxLayout(placeholder)
@@ -58,6 +62,7 @@ class ControlsController(QtCore.QObject):
         self._acq_button: SymbolButton | None = None
         self._interval_button: SymbolButton | None = None
         self._manual_button: SymbolButton | None = None
+        self._continuous_significance_button: SymbolButton | None = None
         self._automation_button: SymbolButton | None = None
         self._skip_button: SymbolButton | None = None
         self._edit_button: SymbolButton | None = None
@@ -97,7 +102,7 @@ class ControlsController(QtCore.QObject):
         acq_layout = QtWidgets.QHBoxLayout()
 
         self._acq_button = SymbolButton("", "")
-        self._on_acq_clicked()  # Initialize button state
+        self._render_acq_button()
         self._acq_button.clicked.connect(self._on_acq_clicked)
         acq_layout.addWidget(self._acq_button)
 
@@ -109,6 +114,11 @@ class ControlsController(QtCore.QObject):
         self._manual_button = SymbolButton("➀", "One-time manual measurement")
         self._manual_button.clicked.connect(self._on_manual_clicked)
         acq_layout.addWidget(self._manual_button)
+
+        self._continuous_significance_button = SymbolButton("★", "")
+        self._continuous_significance_button.clicked.connect(self._on_continuous_significance_clicked)
+        acq_layout.addWidget(self._continuous_significance_button)
+        self._update_continuous_significance_button()
         self._layout.addLayout(acq_layout)
 
         self._layout.addWidget(QHLine())
@@ -137,7 +147,7 @@ class ControlsController(QtCore.QObject):
         auto_layout = QtWidgets.QHBoxLayout()
 
         self._automation_button = SymbolButton("", "")
-        self._on_automation_clicked()  # Initialize button state
+        self._render_automation_button()
         self._automation_button.clicked.connect(self._on_automation_clicked)
         auto_layout.addWidget(self._automation_button)
 
@@ -170,19 +180,17 @@ class ControlsController(QtCore.QObject):
             return
 
         if self._acquisition_running:
+            if self._acquisition_stop_locked:
+                return
             logger.info("Stop acquisition clicked")
             self.acquisition_stop_requested.emit()
             self._acquisition_running = False
-            self._acq_button.setText("●")
-            self._acq_button.setToolTip("Start data acquisition")
-            self._acq_button.setStyleSheet("QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: red; }")
         else:
             logger.info("Start acquisition clicked")
             self.acquisition_start_requested.emit()
             self._acquisition_running = True
-            self._acq_button.setText("■")
-            self._acq_button.setToolTip("Stop data acquisition")
-            self._acq_button.setStyleSheet("QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: black; }")
+        self._render_acq_button()
+        self._update_acquisition_stop_lock()
 
     @QtCore.Slot()
     def _on_interval_clicked(self) -> None:
@@ -231,6 +239,13 @@ class ControlsController(QtCore.QObject):
         self.manual_measurement_requested.emit()
 
     @QtCore.Slot()
+    def _on_continuous_significance_clicked(self) -> None:
+        """Toggle significance marker for timer-based continuous acquisition."""
+        self._continuous_significance_enabled = not self._continuous_significance_enabled
+        self.continuous_significance_change_requested.emit(self._continuous_significance_enabled)
+        self._update_continuous_significance_button()
+
+    @QtCore.Slot()
     def _on_edit_clicked(self) -> None:
         """Handle edit automation button click."""
         logger.info("Edit automation clicked")
@@ -246,23 +261,87 @@ class ControlsController(QtCore.QObject):
             logger.info("Stop automation clicked")
             self.automation_stop_requested.emit()
             self._automation_running = False
-            self._automation_button.setText("▶")
-            self._automation_button.setToolTip("Start automation")
-            self._automation_button.setStyleSheet(
-                "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: green; }"
-            )
         else:
             logger.info("Start automation clicked")
             self.automation_start_requested.emit()
             self._automation_running = True
-            self._automation_button.setText("■")
-            self._automation_button.setToolTip("Pause automation")
-            self._automation_button.setStyleSheet(
-                "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: blue; }"
-            )
+        self._render_automation_button()
+        self._update_acquisition_stop_lock()
 
     @QtCore.Slot()
     def _on_skip_clicked(self) -> None:
         """Handle skip to next step button click."""
         logger.info("Skip to next step clicked")
         self.automation_skip_requested.emit()
+
+    @QtCore.Slot(object)
+    def on_current_step_live_acquisition_required_changed(self, is_required: bool) -> None:
+        """Track whether active automation step requires live acquisition."""
+        self._active_step_requires_live_acquisition = is_required
+        self._update_acquisition_stop_lock()
+
+    @QtCore.Slot(object)
+    def on_automation_running_state_changed(self, is_running: bool) -> None:
+        """Synchronize automation button state from manager signals."""
+        self._automation_running = is_running
+        self._render_automation_button()
+        self._update_acquisition_stop_lock()
+
+    @QtCore.Slot(object)
+    def on_acquisition_running_state_changed(self, is_running: bool) -> None:
+        """Synchronize acquisition running state from manager signals."""
+        self._acquisition_running = is_running
+        self._render_acq_button()
+        self._update_acquisition_stop_lock()
+
+    def _update_acquisition_stop_lock(self) -> None:
+        if self._acq_button is None:
+            return
+        self._acquisition_stop_locked = (
+            self._acquisition_running and self._automation_running and self._active_step_requires_live_acquisition
+        )
+        if self._acquisition_stop_locked:
+            self._acq_button.setToolTip("Stop automation first")
+            self._acq_button.setEnabled(False)
+        elif self._acquisition_running:
+            self._acq_button.setToolTip("Stop data acquisition")
+            self._acq_button.setEnabled(True)
+        else:
+            self._acq_button.setToolTip("Start data acquisition")
+            self._acq_button.setEnabled(True)
+
+    def _update_continuous_significance_button(self) -> None:
+        if self._continuous_significance_button is None:
+            return
+        state = "ON" if self._continuous_significance_enabled else "OFF"
+        color = "goldenrod" if self._continuous_significance_enabled else "gray"
+        self._continuous_significance_button.setToolTip(f"Continuous polling significance: {state}")
+        self._continuous_significance_button.setStyleSheet(
+            f"QToolTip, QPushButton {{ font-size: 20pt; }} QPushButton {{ color: {color}; }}"
+        )
+
+    def _render_acq_button(self) -> None:
+        if self._acq_button is None:
+            return
+        if self._acquisition_running:
+            self._acq_button.setText("■")
+            self._acq_button.setStyleSheet("QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: black; }")
+        else:
+            self._acq_button.setText("●")
+            self._acq_button.setStyleSheet("QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: red; }")
+
+    def _render_automation_button(self) -> None:
+        if self._automation_button is None:
+            return
+        if self._automation_running:
+            self._automation_button.setText("■")
+            self._automation_button.setToolTip("Pause automation")
+            self._automation_button.setStyleSheet(
+                "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: blue; }"
+            )
+        else:
+            self._automation_button.setText("▶")
+            self._automation_button.setToolTip("Start automation")
+            self._automation_button.setStyleSheet(
+                "QToolTip, QPushButton { font-size: 20pt; } QPushButton { color: green; }"
+            )
